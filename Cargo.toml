@@ -33,7 +33,7 @@ path-clean = "1.0.1"
 bevy = { version = "0.13.2" }
 bevy_rapier2d = { version = "0.26.0", features = [
   "simd-stable",
-  "debug-render-2d",
+  "enhanced-determinism",
 ] }
 fake = { version = "2.8.0", features = ["uuid"] }
 rand = "0.8"
@@ -61,4 +61,3 @@ path = "examples/field_instances/main.rs"
 [[example]]
 name = "collectathon"
 path = "examples/collectathon/main.rs"
-
