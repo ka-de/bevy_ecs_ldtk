@@ -32,7 +32,6 @@ path-clean = "1.0.1"
 [dev-dependencies]
 bevy = { version = "0.13.2" }
 bevy_rapier2d = { version = "0.26.0", features = [
-  "simd-stable",
   "enhanced-determinism",
 ] }
 fake = { version = "2.8.0", features = ["uuid"] }
