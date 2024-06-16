@@ -1,9 +1,6 @@
-use crate::{
-    components::{IntGridCell, IntGridCellBundle},
-    ldtk::LayerInstance,
-};
-use bevy::{ecs::system::EntityCommands, prelude::*};
-use std::{collections::HashMap, marker::PhantomData};
+use crate::{ components::{ IntGridCell, IntGridCellBundle }, ldtk::LayerInstance };
+use bevy::{ ecs::system::EntityCommands, prelude::* };
+use std::{ collections::HashMap, marker::PhantomData };
 
 /// [LdtkIntCellAppExt]: super::LdtkIntCellAppExt
 /// [Bundle]: bevy::prelude::Bundle
@@ -195,7 +192,7 @@ pub trait PhantomLdtkIntCellTrait {
         &self,
         entity_commands: &'b mut EntityCommands<'a>,
         int_grid_cell: IntGridCell,
-        layer_instance: &LayerInstance,
+        layer_instance: &LayerInstance
     ) -> &'b mut EntityCommands<'a>;
 }
 
@@ -204,7 +201,7 @@ impl<B: LdtkIntCell + Bundle> PhantomLdtkIntCellTrait for PhantomLdtkIntCell<B> 
         &self,
         entity_commands: &'b mut EntityCommands<'a>,
         int_grid_cell: IntGridCell,
-        layer_instance: &LayerInstance,
+        layer_instance: &LayerInstance
     ) -> &'b mut EntityCommands<'a> {
         entity_commands.insert(B::bundle_int_cell(int_grid_cell, layer_instance))
     }

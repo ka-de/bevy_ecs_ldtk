@@ -32,7 +32,7 @@ mod mother;
 fn main() {
     App::new()
         .add_plugins(
-            DefaultPlugins.set(ImagePlugin::default_nearest()), // prevents blurry sprites
+            DefaultPlugins.set(ImagePlugin::default_nearest()) // prevents blurry sprites
         )
         .add_plugins(LdtkPlugin)
         .insert_resource(LevelSelection::default())
@@ -41,7 +41,7 @@ fn main() {
         .init_resource::<level_title::LevelTitle>()
         .add_systems(
             Update,
-            level_title::set_level_title_to_current_level.run_if(on_event::<LevelEvent>()),
+            level_title::set_level_title_to_current_level.run_if(on_event::<LevelEvent>())
         )
         .register_ldtk_entity::<enemy::EnemyBundle>("Enemy")
         // The rest of this is bevy_inspector_egui boilerplate
@@ -60,7 +60,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn(LdtkWorldBundle {
         ldtk_handle,
-        transform: Transform::from_scale(Vec3::splat(2.)),
+        transform: Transform::from_scale(Vec3::splat(2.0)),
         ..Default::default()
     });
 }

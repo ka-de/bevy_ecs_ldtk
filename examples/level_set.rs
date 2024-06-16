@@ -44,7 +44,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: asset_server.load("WorldMap_Free_layout.ldtk"),
         level_set,
-        transform: Transform::from_xyz(-256., -144., 0.),
+        transform: Transform::from_xyz(-256.0, -144.0, 0.0),
         ..Default::default()
     });
 }

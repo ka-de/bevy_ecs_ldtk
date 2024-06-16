@@ -70,9 +70,9 @@ mod tests {
             "9ae9ecf0-ef64-4d96-bc68-cead527efe90",
             "57b26336-8f4e-41ee-8a1b-7af708e4a338",
         ]
-        .into_iter()
-        .map(LevelIid::new)
-        .collect::<HashSet<_>>();
+            .into_iter()
+            .map(LevelIid::new)
+            .collect::<HashSet<_>>();
 
         let level_set = LevelSet::from_iter(iids.clone());
 

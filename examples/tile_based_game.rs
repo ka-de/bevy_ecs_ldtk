@@ -12,15 +12,12 @@ fn main() {
         .insert_resource(LevelSelection::index(0))
         .register_ldtk_entity::<PlayerBundle>("Player")
         .register_ldtk_entity::<GoalBundle>("Goal")
-        .add_systems(
-            Update,
-            (
-                move_player_from_input,
-                translate_grid_coords_entities,
-                cache_wall_locations,
-                check_goal,
-            ),
-        )
+        .add_systems(Update, (
+            move_player_from_input,
+            translate_grid_coords_entities,
+            cache_wall_locations,
+            check_goal,
+        ))
         .register_ldtk_int_cell::<WallBundle>(1)
         .init_resource::<LevelWalls>()
         .run();
@@ -80,18 +77,18 @@ struct LevelWalls {
 
 impl LevelWalls {
     fn in_wall(&self, grid_coords: &GridCoords) -> bool {
-        grid_coords.x < 0
-            || grid_coords.y < 0
-            || grid_coords.x >= self.level_width
-            || grid_coords.y >= self.level_height
-            || self.wall_locations.contains(grid_coords)
+        grid_coords.x < 0 ||
+            grid_coords.y < 0 ||
+            grid_coords.x >= self.level_width ||
+            grid_coords.y >= self.level_height ||
+            self.wall_locations.contains(grid_coords)
     }
 }
 
 fn move_player_from_input(
     mut players: Query<&mut GridCoords, With<Player>>,
     input: Res<ButtonInput<KeyCode>>,
-    level_walls: Res<LevelWalls>,
+    level_walls: Res<LevelWalls>
 ) {
     let movement_direction = if input.just_pressed(KeyCode::KeyW) {
         GridCoords::new(0, 1)
@@ -116,12 +113,12 @@ fn move_player_from_input(
 const GRID_SIZE: i32 = 16;
 
 fn translate_grid_coords_entities(
-    mut grid_coords_entities: Query<(&mut Transform, &GridCoords), Changed<GridCoords>>,
+    mut grid_coords_entities: Query<(&mut Transform, &GridCoords), Changed<GridCoords>>
 ) {
     for (mut transform, grid_coords) in grid_coords_entities.iter_mut() {
-        transform.translation =
-            bevy_ecs_ldtk::utils::grid_coords_to_translation(*grid_coords, IVec2::splat(GRID_SIZE))
-                .extend(transform.translation.z);
+        transform.translation = bevy_ecs_ldtk::utils
+            ::grid_coords_to_translation(*grid_coords, IVec2::splat(GRID_SIZE))
+            .extend(transform.translation.z);
     }
 }
 
@@ -130,7 +127,7 @@ fn cache_wall_locations(
     mut level_events: EventReader<LevelEvent>,
     walls: Query<&GridCoords, With<Wall>>,
     ldtk_project_entities: Query<&Handle<LdtkProject>>,
-    ldtk_project_assets: Res<Assets<LdtkProject>>,
+    ldtk_project_assets: Res<Assets<LdtkProject>>
 ) {
     for level_event in level_events.read() {
         if let LevelEvent::Spawned(level_iid) = level_event {
@@ -157,12 +154,13 @@ fn cache_wall_locations(
 fn check_goal(
     level_selection: ResMut<LevelSelection>,
     players: Query<&GridCoords, (With<Player>, Changed<GridCoords>)>,
-    goals: Query<&GridCoords, With<Goal>>,
+    goals: Query<&GridCoords, With<Goal>>
 ) {
-    if players
-        .iter()
-        .zip(goals.iter())
-        .any(|(player_grid_coords, goal_grid_coords)| player_grid_coords == goal_grid_coords)
+    if
+        players
+            .iter()
+            .zip(goals.iter())
+            .any(|(player_grid_coords, goal_grid_coords)| player_grid_coords == goal_grid_coords)
     {
         let indices = match level_selection.into_inner() {
             LevelSelection::Indices(indices) => indices,

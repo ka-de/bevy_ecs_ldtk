@@ -1,4 +1,4 @@
-use crate::{assets::LevelIndices, ldtk::Level, LevelIid};
+use crate::{ assets::LevelIndices, ldtk::Level, LevelIid };
 use bevy::prelude::*;
 
 /// [`Resource`] for choosing which level(s) to spawn.

@@ -17,11 +17,7 @@ fn main() {
             ..default()
         })
         .add_systems(Startup, setup)
-        .add_plugins((
-            coin::CoinPlugin,
-            player::PlayerPlugin,
-            respawn::RespawnPlugin,
-        ))
+        .add_plugins((coin::CoinPlugin, player::PlayerPlugin, respawn::RespawnPlugin))
         .run();
 }
 

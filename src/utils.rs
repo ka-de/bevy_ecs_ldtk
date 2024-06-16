@@ -1,19 +1,13 @@
 //! Utility functions used internally by the plugin that have been exposed to the public api.
 
 #[allow(unused_imports)]
-use crate::{
-    app::LdtkEntity,
-    components::{GridCoords, IntGridCell},
-};
+use crate::{ app::LdtkEntity, components::{ GridCoords, IntGridCell } };
 
-use crate::{components::TileGridBundle, ldtk::*};
+use crate::{ components::TileGridBundle, ldtk::* };
 use bevy::prelude::*;
-use bevy_ecs_tilemap::{
-    map::{TilemapId, TilemapSize},
-    tiles::{TilePos, TileStorage},
-};
+use bevy_ecs_tilemap::{ map::{ TilemapId, TilemapSize }, tiles::{ TilePos, TileStorage } };
 
-use std::{collections::HashMap, hash::Hash};
+use std::{ collections::HashMap, hash::Hash };
 
 /// The `int_grid_csv` field of a [LayerInstance] is a 1-dimensional [`Vec<i32>`].
 /// This function can map the indices of this [Vec] to a corresponding [GridCoords].
@@ -23,7 +17,7 @@ use std::{collections::HashMap, hash::Hash};
 pub fn int_grid_index_to_grid_coords(
     index: usize,
     layer_width_in_tiles: u32,
-    layer_height_in_tiles: u32,
+    layer_height_in_tiles: u32
 ) -> Option<GridCoords> {
     if layer_width_in_tiles * layer_height_in_tiles == 0 {
         // Checking for potential n mod 0 and n / 0 issues
@@ -31,9 +25,9 @@ pub fn int_grid_index_to_grid_coords(
         return None;
     }
 
-    let tile_x = index as u32 % layer_width_in_tiles;
+    let tile_x = (index as u32) % layer_width_in_tiles;
 
-    let inverted_y = (index as u32 - tile_x) / layer_width_in_tiles;
+    let inverted_y = ((index as u32) - tile_x) / layer_width_in_tiles;
 
     if layer_height_in_tiles > inverted_y {
         // Checking for potential subtraction issues.
@@ -41,10 +35,12 @@ pub fn int_grid_index_to_grid_coords(
         // is a natural number.
         // This means tile_x == index where index < n, and tile_x < index where index >= n.
 
-        Some(ldtk_grid_coords_to_grid_coords(
-            IVec2::new(tile_x as i32, inverted_y as i32),
-            layer_height_in_tiles as i32,
-        ))
+        Some(
+            ldtk_grid_coords_to_grid_coords(
+                IVec2::new(tile_x as i32, inverted_y as i32),
+                layer_height_in_tiles as i32
+            )
+        )
     } else {
         None
     }
@@ -52,16 +48,22 @@ pub fn int_grid_index_to_grid_coords(
 
 /// Simple conversion from a list of [EntityDefinition]s to a map using their Uids as the keys.
 pub fn create_entity_definition_map(
-    entity_definitions: &[EntityDefinition],
+    entity_definitions: &[EntityDefinition]
 ) -> HashMap<i32, &EntityDefinition> {
-    entity_definitions.iter().map(|e| (e.uid, e)).collect()
+    entity_definitions
+        .iter()
+        .map(|e| (e.uid, e))
+        .collect()
 }
 
 /// Simple conversion from a list of [LayerDefinition]s to a map using their Uids as the keys.
 pub fn create_layer_definition_map(
-    layer_definitions: &[LayerDefinition],
+    layer_definitions: &[LayerDefinition]
 ) -> HashMap<i32, &LayerDefinition> {
-    layer_definitions.iter().map(|l| (l.uid, l)).collect()
+    layer_definitions
+        .iter()
+        .map(|l| (l.uid, l))
+        .collect()
 }
 
 /// Performs [`EntityInstance`] to [`Transform`] conversion
@@ -74,7 +76,7 @@ pub fn create_layer_definition_map(
 pub fn calculate_transform_from_entity_instance(
     entity_instance: &EntityInstance,
     entity_definition_map: &HashMap<i32, &EntityDefinition>,
-    level_height: i32,
+    level_height: i32
 ) -> Transform {
     let entity_definition = entity_definition_map.get(&entity_instance.def_uid).unwrap();
 
@@ -89,11 +91,11 @@ pub fn calculate_transform_from_entity_instance(
         entity_instance.px,
         level_height,
         size,
-        entity_instance.pivot,
+        entity_instance.pivot
     );
     let scale = size.as_vec2() / def_size.as_vec2();
 
-    Transform::from_translation(translation.extend(0.)).with_scale(scale.extend(1.))
+    Transform::from_translation(translation.extend(0.0)).with_scale(scale.extend(1.0))
 }
 
 fn ldtk_coord_conversion(coords: IVec2, height: i32) -> IVec2 {
@@ -156,7 +158,7 @@ pub fn translation_to_grid_coords(translation: Vec2, grid_size: IVec2) -> GridCo
 /// Internally, this transform is used to place [IntGridCell]s as children of the level.
 pub fn grid_coords_to_translation_relative_to_tile_layer(
     grid_coords: GridCoords,
-    tile_size: IVec2,
+    tile_size: IVec2
 ) -> Vec2 {
     let tile_coords: IVec2 = grid_coords.into();
     let tile_size = tile_size.as_vec2();
@@ -168,8 +170,8 @@ pub fn grid_coords_to_translation_relative_to_tile_layer(
 ///
 /// See also: [grid_coords_to_translation_relative_to_tile_layer]
 pub fn grid_coords_to_translation(grid_coords: GridCoords, tile_size: IVec2) -> Vec2 {
-    grid_coords_to_translation_relative_to_tile_layer(grid_coords, tile_size)
-        + (tile_size.as_vec2() / 2.)
+    grid_coords_to_translation_relative_to_tile_layer(grid_coords, tile_size) +
+        tile_size.as_vec2() / 2.0
 }
 
 /// Performs LDtk pixel coordinate to [GridCoords] conversion.
@@ -178,7 +180,7 @@ pub fn grid_coords_to_translation(grid_coords: GridCoords, tile_size: IVec2) -> 
 pub fn ldtk_pixel_coords_to_grid_coords(
     ldtk_coords: IVec2,
     ldtk_grid_height: i32,
-    grid_size: IVec2,
+    grid_size: IVec2
 ) -> GridCoords {
     ldtk_grid_coords_to_grid_coords(ldtk_coords / grid_size, ldtk_grid_height)
 }
@@ -195,10 +197,10 @@ pub fn ldtk_pixel_coords_to_grid_coords(
 pub fn ldtk_grid_coords_to_translation_relative_to_tile_layer(
     ldtk_coords: IVec2,
     ldtk_grid_height: i32,
-    grid_size: IVec2,
+    grid_size: IVec2
 ) -> Vec2 {
-    ldtk_pixel_coords_to_translation(ldtk_coords * grid_size, ldtk_grid_height * grid_size.y)
-        + Vec2::new(0., -grid_size.y as f32)
+    ldtk_pixel_coords_to_translation(ldtk_coords * grid_size, ldtk_grid_height * grid_size.y) +
+        Vec2::new(0.0, -grid_size.y as f32)
 }
 
 /// Performs LDtk grid coordinate to translation conversion, so that the resulting translation is
@@ -208,10 +210,14 @@ pub fn ldtk_grid_coords_to_translation_relative_to_tile_layer(
 pub fn ldtk_grid_coords_to_translation(
     ldtk_coords: IVec2,
     ldtk_grid_height: i32,
-    grid_size: IVec2,
+    grid_size: IVec2
 ) -> Vec2 {
-    ldtk_grid_coords_to_translation_relative_to_tile_layer(ldtk_coords, ldtk_grid_height, grid_size)
-        + (grid_size.as_vec2() / 2.)
+    ldtk_grid_coords_to_translation_relative_to_tile_layer(
+        ldtk_coords,
+        ldtk_grid_height,
+        grid_size
+    ) +
+        grid_size.as_vec2() / 2.0
 }
 
 /// Performs LDtk pixel coordinate to translation conversion, with "pivot" support.
@@ -225,7 +231,7 @@ pub fn ldtk_pixel_coords_to_translation_pivoted(
     ldtk_coords: IVec2,
     ldtk_pixel_height: i32,
     entity_size: IVec2,
-    pivot: Vec2,
+    pivot: Vec2
 ) -> Vec2 {
     let pivot_point = ldtk_coord_conversion(ldtk_coords, ldtk_pixel_height).as_vec2();
 
@@ -245,13 +251,14 @@ pub(crate) fn set_all_tiles_with_func(
     storage: &mut TileStorage,
     size: TilemapSize,
     tilemap_id: TilemapId,
-    mut func: impl FnMut(TilePos) -> Option<TileGridBundle>,
+    mut func: impl FnMut(TilePos) -> Option<TileGridBundle>
 ) {
     for x in 0..size.x {
         for y in 0..size.y {
             let tile_pos = TilePos { x, y };
-            let tile_entity = func(tile_pos)
-                .map(|tile_bundle| commands.spawn(tile_bundle).insert(tilemap_id).id());
+            let tile_entity = func(tile_pos).map(|tile_bundle|
+                commands.spawn(tile_bundle).insert(tilemap_id).id()
+            );
             match tile_entity {
                 Some(tile_entity) => storage.set(&tile_pos, tile_entity),
                 None => storage.remove(&tile_pos),
@@ -273,11 +280,10 @@ pub(crate) fn set_all_tiles_with_func(
 pub(crate) fn try_each_optional_permutation<A, B, R>(
     a: A,
     b: B,
-    mut func: impl FnMut(Option<A>, Option<B>) -> Option<R>,
-) -> Option<R>
-where
-    A: Clone,
-    B: Clone,
+    mut func: impl FnMut(Option<A>, Option<B>) -> Option<R>
+)
+    -> Option<R>
+    where A: Clone, B: Clone
 {
     func(Some(a.clone()), Some(b.clone()))
         .or_else(|| func(None, Some(b)))
@@ -296,11 +302,10 @@ pub(crate) fn ldtk_map_get_or_default<'a, A, B, L>(
     a: A,
     b: B,
     default: &'a L,
-    map: &'a HashMap<(Option<A>, Option<B>), L>,
-) -> &'a L
-where
-    A: Hash + Eq + Clone,
-    B: Hash + Eq + Clone,
+    map: &'a HashMap<(Option<A>, Option<B>), L>
+)
+    -> &'a L
+    where A: Hash + Eq + Clone, B: Hash + Eq + Clone
 {
     try_each_optional_permutation(a, b, |x, y| map.get(&(x, y))).unwrap_or(default)
 }
@@ -315,47 +320,54 @@ pub fn sprite_sheet_bundle_from_entity_info(
     tileset: Option<&Handle<Image>>,
     tileset_definition: Option<&TilesetDefinition>,
     texture_atlases: &mut Assets<TextureAtlasLayout>,
-    grid: bool,
+    grid: bool
 ) -> SpriteSheetBundle {
     match (tileset, &entity_instance.tile, tileset_definition) {
-        (Some(tileset), Some(tile), Some(tileset_definition)) => SpriteSheetBundle {
-            atlas: if grid {
-                let layout = TextureAtlasLayout::from_grid(
-                    Vec2::new(tile.w as f32, tile.h as f32),
-                    tileset_definition.c_wid as usize,
-                    tileset_definition.c_hei as usize,
-                    Some(Vec2::splat(tileset_definition.spacing as f32)),
-                    Some(Vec2::splat(tileset_definition.padding as f32)),
-                );
-                let texture_atlas: Handle<TextureAtlasLayout> = texture_atlases.add(layout);
-                TextureAtlas {
-                    layout: texture_atlas,
-                    index: (tile.y / (tile.h + tileset_definition.spacing)) as usize
-                        * tileset_definition.c_wid as usize
-                        + (tile.x / (tile.w + tileset_definition.spacing)) as usize,
-                }
-            } else {
-                let mut layout = TextureAtlasLayout::new_empty(Vec2::new(
-                    tileset_definition.px_wid as f32,
-                    tileset_definition.px_hei as f32,
-                ));
-                layout.add_texture(Rect::new(
-                    tile.x as f32,
-                    tile.y as f32,
-                    (tile.x + tile.w) as f32,
-                    (tile.y + tile.h) as f32,
-                ));
-                let texture_atlas: Handle<TextureAtlasLayout> = texture_atlases.add(layout);
-                TextureAtlas {
-                    layout: texture_atlas,
-                    index: 0,
-                }
+        (Some(tileset), Some(tile), Some(tileset_definition)) =>
+            SpriteSheetBundle {
+                atlas: if grid {
+                    let layout = TextureAtlasLayout::from_grid(
+                        Vec2::new(tile.w as f32, tile.h as f32),
+                        tileset_definition.c_wid as usize,
+                        tileset_definition.c_hei as usize,
+                        Some(Vec2::splat(tileset_definition.spacing as f32)),
+                        Some(Vec2::splat(tileset_definition.padding as f32))
+                    );
+                    let texture_atlas: Handle<TextureAtlasLayout> = texture_atlases.add(layout);
+                    TextureAtlas {
+                        layout: texture_atlas,
+                        index: ((tile.y / (tile.h + tileset_definition.spacing)) as usize) *
+                            (tileset_definition.c_wid as usize) +
+                        ((tile.x / (tile.w + tileset_definition.spacing)) as usize),
+                    }
+                } else {
+                    let mut layout = TextureAtlasLayout::new_empty(
+                        Vec2::new(
+                            tileset_definition.px_wid as f32,
+                            tileset_definition.px_hei as f32
+                        )
+                    );
+                    layout.add_texture(
+                        Rect::new(
+                            tile.x as f32,
+                            tile.y as f32,
+                            (tile.x + tile.w) as f32,
+                            (tile.y + tile.h) as f32
+                        )
+                    );
+                    let texture_atlas: Handle<TextureAtlasLayout> = texture_atlases.add(layout);
+                    TextureAtlas {
+                        layout: texture_atlas,
+                        index: 0,
+                    }
+                },
+                texture: tileset.clone(),
+                ..Default::default()
             },
-            texture: tileset.clone(),
-            ..Default::default()
-        },
         _ => {
-            warn!("EntityInstance needs a tile, an associated tileset, and an associated tileset definition to be bundled as a SpriteSheetBundle");
+            warn!(
+                "EntityInstance needs a tile, an associated tileset, and an associated tileset definition to be bundled as a SpriteSheetBundle"
+            );
             SpriteSheetBundle::default()
         }
     }
@@ -387,30 +399,15 @@ mod tests {
 
     #[test]
     fn test_int_grid_index_to_tile_pos() {
-        assert_eq!(
-            int_grid_index_to_grid_coords(3, 4, 5),
-            Some(GridCoords::new(3, 4))
-        );
+        assert_eq!(int_grid_index_to_grid_coords(3, 4, 5), Some(GridCoords::new(3, 4)));
 
-        assert_eq!(
-            int_grid_index_to_grid_coords(10, 5, 5),
-            Some(GridCoords::new(0, 2))
-        );
+        assert_eq!(int_grid_index_to_grid_coords(10, 5, 5), Some(GridCoords::new(0, 2)));
 
-        assert_eq!(
-            int_grid_index_to_grid_coords(49, 10, 5),
-            Some(GridCoords::new(9, 0))
-        );
+        assert_eq!(int_grid_index_to_grid_coords(49, 10, 5), Some(GridCoords::new(9, 0)));
 
-        assert_eq!(
-            int_grid_index_to_grid_coords(64, 100, 1),
-            Some(GridCoords::new(64, 0))
-        );
+        assert_eq!(int_grid_index_to_grid_coords(64, 100, 1), Some(GridCoords::new(64, 0)));
 
-        assert_eq!(
-            int_grid_index_to_grid_coords(35, 1, 100),
-            Some(GridCoords::new(0, 64))
-        );
+        assert_eq!(int_grid_index_to_grid_coords(35, 1, 100), Some(GridCoords::new(0, 64)));
     }
 
     #[test]
@@ -442,7 +439,7 @@ mod tests {
                 width: 10,
                 height: 25,
                 ..Default::default()
-            },
+            }
         ];
         let entity_definition_map = create_entity_definition_map(&entity_definitions);
 
@@ -452,12 +449,15 @@ mod tests {
             def_uid: 0,
             width: 32,
             height: 32,
-            pivot: Vec2::new(0., 0.),
+            pivot: Vec2::new(0.0, 0.0),
             ..Default::default()
         };
-        let result =
-            calculate_transform_from_entity_instance(&entity_instance, &entity_definition_map, 320);
-        assert_eq!(result, Transform::from_xyz(272., 48., 0.));
+        let result = calculate_transform_from_entity_instance(
+            &entity_instance,
+            &entity_definition_map,
+            320
+        );
+        assert_eq!(result, Transform::from_xyz(272.0, 48.0, 0.0));
 
         // difficult case
         let entity_instance = EntityInstance {
@@ -465,14 +465,17 @@ mod tests {
             def_uid: 2,
             width: 30,
             height: 50,
-            pivot: Vec2::new(1., 1.),
+            pivot: Vec2::new(1.0, 1.0),
             ..Default::default()
         };
-        let result =
-            calculate_transform_from_entity_instance(&entity_instance, &entity_definition_map, 100);
+        let result = calculate_transform_from_entity_instance(
+            &entity_instance,
+            &entity_definition_map,
+            100
+        );
         assert_eq!(
             result,
-            Transform::from_xyz(25., 75., 0.).with_scale(Vec3::new(3., 2., 1.))
+            Transform::from_xyz(25.0, 75.0, 0.0).with_scale(Vec3::new(3.0, 2.0, 1.0))
         );
     }
 
@@ -498,7 +501,7 @@ mod tests {
             def_uid: 0,
             width: 64,
             height: 64,
-            pivot: Vec2::new(1., 1.),
+            pivot: Vec2::new(1.0, 1.0),
             tile: Some(TilesetRectangle {
                 x: 0,
                 y: 0,
@@ -508,11 +511,14 @@ mod tests {
             }),
             ..Default::default()
         };
-        let result =
-            calculate_transform_from_entity_instance(&entity_instance, &entity_definition_map, 100);
+        let result = calculate_transform_from_entity_instance(
+            &entity_instance,
+            &entity_definition_map,
+            100
+        );
         assert_eq!(
             result,
-            Transform::from_xyz(32., 68., 0.).with_scale(Vec3::new(4., 2., 1.))
+            Transform::from_xyz(32.0, 68.0, 0.0).with_scale(Vec3::new(4.0, 2.0, 1.0))
         );
     }
 
@@ -520,21 +526,15 @@ mod tests {
     fn test_translation_ldtk_pixel_coords_conversion() {
         assert_eq!(
             ldtk_pixel_coords_to_translation(IVec2::new(32, 64), 128),
-            Vec2::new(32., 64.)
+            Vec2::new(32.0, 64.0)
         );
-        assert_eq!(
-            ldtk_pixel_coords_to_translation(IVec2::new(0, 0), 100),
-            Vec2::new(0., 100.)
-        );
+        assert_eq!(ldtk_pixel_coords_to_translation(IVec2::new(0, 0), 100), Vec2::new(0.0, 100.0));
 
         assert_eq!(
-            translation_to_ldtk_pixel_coords(Vec2::new(32., 64.), 128),
+            translation_to_ldtk_pixel_coords(Vec2::new(32.0, 64.0), 128),
             IVec2::new(32, 64)
         );
-        assert_eq!(
-            translation_to_ldtk_pixel_coords(Vec2::new(0., 0.), 100),
-            IVec2::new(0, 100)
-        );
+        assert_eq!(translation_to_ldtk_pixel_coords(Vec2::new(0.0, 0.0), 100), IVec2::new(0, 100));
     }
 
     #[test]
@@ -545,7 +545,7 @@ mod tests {
                 4,
                 IVec2::splat(32)
             ),
-            Vec2::new(32., 64.)
+            Vec2::new(32.0, 64.0)
         );
 
         assert_eq!(
@@ -554,7 +554,7 @@ mod tests {
                 2,
                 IVec2::splat(100)
             ),
-            Vec2::new(100., 0.)
+            Vec2::new(100.0, 0.0)
         );
 
         assert_eq!(
@@ -563,7 +563,7 @@ mod tests {
                 10,
                 IVec2::splat(1)
             ),
-            Vec2::new(0., 5.)
+            Vec2::new(0.0, 5.0)
         );
     }
 
@@ -571,12 +571,12 @@ mod tests {
     fn test_ldtk_grid_coords_to_translation() {
         assert_eq!(
             ldtk_grid_coords_to_translation(IVec2::new(1, 1), 4, IVec2::splat(32)),
-            Vec2::new(48., 80.)
+            Vec2::new(48.0, 80.0)
         );
 
         assert_eq!(
             ldtk_grid_coords_to_translation(IVec2::new(1, 1), 2, IVec2::splat(100)),
-            Vec2::new(150., 50.)
+            Vec2::new(150.0, 50.0)
         );
 
         assert_eq!(
@@ -592,7 +592,7 @@ mod tests {
                 GridCoords::new(1, 2),
                 IVec2::splat(32)
             ),
-            Vec2::new(32., 64.)
+            Vec2::new(32.0, 64.0)
         );
 
         assert_eq!(
@@ -600,7 +600,7 @@ mod tests {
                 GridCoords::new(1, 0),
                 IVec2::splat(100)
             ),
-            Vec2::new(100., 0.)
+            Vec2::new(100.0, 0.0)
         );
 
         assert_eq!(
@@ -616,12 +616,12 @@ mod tests {
     fn test_grid_coords_to_translation() {
         assert_eq!(
             grid_coords_to_translation(GridCoords::new(1, 2), IVec2::splat(32)),
-            Vec2::new(48., 80.)
+            Vec2::new(48.0, 80.0)
         );
 
         assert_eq!(
             grid_coords_to_translation(GridCoords::new(1, 0), IVec2::splat(100)),
-            Vec2::new(150., 50.)
+            Vec2::new(150.0, 50.0)
         );
 
         assert_eq!(
@@ -639,7 +639,7 @@ mod tests {
                 IVec2::splat(32),
                 Vec2::ZERO
             ),
-            Vec2::new(48., 48.),
+            Vec2::new(48.0, 48.0)
         );
 
         assert_eq!(
@@ -647,9 +647,9 @@ mod tests {
                 IVec2::new(0, 0),
                 10,
                 IVec2::splat(1),
-                Vec2::new(1., 0.)
+                Vec2::new(1.0, 0.0)
             ),
-            Vec2::new(-0.5, 9.5),
+            Vec2::new(-0.5, 9.5)
         );
 
         assert_eq!(
@@ -659,7 +659,7 @@ mod tests {
                 IVec2::splat(5),
                 Vec2::new(0.5, 0.5)
             ),
-            Vec2::new(20., 0.),
+            Vec2::new(20.0, 0.0)
         );
     }
 

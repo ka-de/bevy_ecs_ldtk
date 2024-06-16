@@ -1,8 +1,8 @@
-use std::{any::TypeId, ops::Range};
+use std::{ any::TypeId, ops::Range };
 
-use crate::ldtk::{LayerInstance, Level, World};
+use crate::ldtk::{ LayerInstance, Level, World };
 use derive_more::Constructor;
-use fake::{faker::lorem::en::Words, uuid::UUIDv4, Dummy, Fake, Faker};
+use fake::{ faker::lorem::en::Words, uuid::UUIDv4, Dummy, Fake, Faker };
 use rand::Rng;
 
 use super::LdtkJson;
@@ -25,7 +25,7 @@ pub struct LayerFaker {
 
 impl Dummy<Faker> for LayerFaker {
     fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
-        let identifier = LdtkIdentifierFaker { num_words: 2..5 }.fake_with_rng(rng);
+        let identifier = (LdtkIdentifierFaker { num_words: 2..5 }).fake_with_rng(rng);
         LayerFaker { identifier }
     }
 }
@@ -56,7 +56,7 @@ impl Dummy<UnloadedLevelFaker> for Level {
         Level {
             iid: UUIDv4.fake_with_rng(rng),
             uid: faker.fake_with_rng(rng),
-            identifier: LdtkIdentifierFaker { num_words: 2..5 }.fake_with_rng(rng),
+            identifier: (LdtkIdentifierFaker { num_words: 2..5 }).fake_with_rng(rng),
             ..Default::default()
         }
     }
@@ -82,11 +82,10 @@ impl Dummy<LoadedLevelFaker> for Level {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &LoadedLevelFaker, rng: &mut R) -> Level {
         Level {
             layer_instances: Some(
-                config
-                    .layer_fakers
+                config.layer_fakers
                     .iter()
                     .map(|layer_faker| layer_faker.fake_with_rng(rng))
-                    .collect(),
+                    .collect()
             ),
             ..UnloadedLevelFaker.fake_with_rng(rng)
         }
@@ -96,7 +95,7 @@ impl Dummy<LoadedLevelFaker> for Level {
 impl Dummy<Faker> for Level {
     fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
         let layer_fakers: Vec<LayerFaker> = (Faker, 2..5).fake_with_rng(rng);
-        LoadedLevelFaker { layer_fakers }.fake_with_rng(rng)
+        (LoadedLevelFaker { layer_fakers }).fake_with_rng(rng)
     }
 }
 
@@ -120,33 +119,25 @@ impl Dummy<LoadedLevelsFaker> for Vec<Level> {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &LoadedLevelsFaker, rng: &mut R) -> Vec<Level> {
         (
             LoadedLevelFaker {
-                layer_fakers: config
-                    .layer_fakers
+                layer_fakers: config.layer_fakers
                     .clone()
                     .unwrap_or((Faker, 2..5).fake_with_rng(rng)),
             },
             config.num_levels.clone().unwrap_or(4..8),
-        )
-            .fake_with_rng(rng)
+        ).fake_with_rng(rng)
     }
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Constructor)]
-pub struct WorldFaker<L>
-where
-    Vec<Level>: Dummy<L>,
-{
+pub struct WorldFaker<L> where Vec<Level>: Dummy<L> {
     pub levels_faker: L,
 }
 
-impl<L> Dummy<WorldFaker<L>> for World
-where
-    Vec<Level>: Dummy<L>,
-{
+impl<L> Dummy<WorldFaker<L>> for World where Vec<Level>: Dummy<L> {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &WorldFaker<L>, rng: &mut R) -> Self {
         World {
             iid: UUIDv4.fake_with_rng(rng),
-            identifier: LdtkIdentifierFaker { num_words: 2..5 }.fake_with_rng(rng),
+            identifier: (LdtkIdentifierFaker { num_words: 2..5 }).fake_with_rng(rng),
             levels: config.levels_faker.fake_with_rng(rng),
             ..Default::default()
         }
@@ -155,26 +146,18 @@ where
 
 impl Dummy<Faker> for World {
     fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
-        WorldFaker {
+        (WorldFaker {
             levels_faker: LoadedLevelsFaker::default(),
-        }
-        .fake_with_rng(rng)
+        }).fake_with_rng(rng)
     }
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Constructor)]
-pub struct RootLevelsLdtkJsonFaker<L>
-where
-    Vec<Level>: Dummy<L>,
-{
+pub struct RootLevelsLdtkJsonFaker<L> where Vec<Level>: Dummy<L> {
     pub levels_faker: L,
 }
 
-impl<L> Dummy<RootLevelsLdtkJsonFaker<L>> for LdtkJson
-where
-    Vec<Level>: Dummy<L>,
-    L: 'static,
-{
+impl<L> Dummy<RootLevelsLdtkJsonFaker<L>> for LdtkJson where Vec<Level>: Dummy<L>, L: 'static {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &RootLevelsLdtkJsonFaker<L>, rng: &mut R) -> Self {
         LdtkJson {
             iid: UUIDv4.fake_with_rng(rng),
@@ -186,18 +169,14 @@ where
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Constructor)]
-pub struct WorldLevelsLdtkJsonFaker<L>
-where
-    Vec<Level>: Dummy<L>,
-{
+pub struct WorldLevelsLdtkJsonFaker<L> where Vec<Level>: Dummy<L> {
     pub levels_faker: L,
     pub num_worlds: Range<usize>,
 }
 
-impl<L> Dummy<WorldLevelsLdtkJsonFaker<L>> for LdtkJson
-where
-    Vec<Level>: Dummy<L>,
-    L: Clone + 'static,
+impl<L> Dummy<WorldLevelsLdtkJsonFaker<L>>
+    for LdtkJson
+    where Vec<Level>: Dummy<L>, L: Clone + 'static
 {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &WorldLevelsLdtkJsonFaker<L>, rng: &mut R) -> Self {
         LdtkJson {
@@ -207,8 +186,7 @@ where
                     levels_faker: config.levels_faker.clone(),
                 },
                 config.num_worlds.clone(),
-            )
-                .fake_with_rng(rng),
+            ).fake_with_rng(rng),
             external_levels: TypeId::of::<L>() == TypeId::of::<UnloadedLevelsFaker>(),
             ..Default::default()
         }
@@ -216,18 +194,14 @@ where
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Constructor)]
-pub struct MixedLevelsLdtkJsonFaker<L>
-where
-    Vec<Level>: Dummy<L>,
-{
+pub struct MixedLevelsLdtkJsonFaker<L> where Vec<Level>: Dummy<L> {
     pub levels_faker: L,
     pub num_worlds: Range<usize>,
 }
 
-impl<L> Dummy<MixedLevelsLdtkJsonFaker<L>> for LdtkJson
-where
-    Vec<Level>: Dummy<L>,
-    L: Clone + 'static,
+impl<L> Dummy<MixedLevelsLdtkJsonFaker<L>>
+    for LdtkJson
+    where Vec<Level>: Dummy<L>, L: Clone + 'static
 {
     fn dummy_with_rng<R: Rng + ?Sized>(config: &MixedLevelsLdtkJsonFaker<L>, rng: &mut R) -> Self {
         LdtkJson {
@@ -238,8 +212,7 @@ where
                     levels_faker: config.levels_faker.clone(),
                 },
                 config.num_worlds.clone(),
-            )
-                .fake_with_rng(rng),
+            ).fake_with_rng(rng),
             external_levels: TypeId::of::<L>() == TypeId::of::<UnloadedLevelsFaker>(),
             ..Default::default()
         }
@@ -248,10 +221,9 @@ where
 
 impl Dummy<Faker> for LdtkJson {
     fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
-        RootLevelsLdtkJsonFaker {
+        (RootLevelsLdtkJsonFaker {
             levels_faker: LoadedLevelsFaker::default(),
-        }
-        .fake_with_rng(rng)
+        }).fake_with_rng(rng)
     }
 }
 
@@ -263,15 +235,14 @@ pub struct RootLevelsLdtkJsonWithExternalLevelsFaker {
 impl Dummy<RootLevelsLdtkJsonWithExternalLevelsFaker> for (LdtkJson, Vec<Level>) {
     fn dummy_with_rng<R: Rng + ?Sized>(
         config: &RootLevelsLdtkJsonWithExternalLevelsFaker,
-        rng: &mut R,
+        rng: &mut R
     ) -> Self {
         let mut ldtk_json: LdtkJson = config.ldtk_json_faker.fake_with_rng(rng);
         let levels = ldtk_json.levels.clone();
 
-        ldtk_json
-            .levels
-            .iter_mut()
-            .for_each(|level| level.layer_instances = None);
+        ldtk_json.levels.iter_mut().for_each(|level| {
+            level.layer_instances = None;
+        });
 
         ldtk_json.external_levels = true;
 
@@ -287,20 +258,18 @@ pub struct WorldLevelsLdtkJsonWithExternalLevelsFaker {
 impl Dummy<WorldLevelsLdtkJsonWithExternalLevelsFaker> for (LdtkJson, Vec<Level>) {
     fn dummy_with_rng<R: Rng + ?Sized>(
         config: &WorldLevelsLdtkJsonWithExternalLevelsFaker,
-        rng: &mut R,
+        rng: &mut R
     ) -> Self {
         let mut ldtk_json: LdtkJson = config.ldtk_json_faker.fake_with_rng(rng);
-        let levels = ldtk_json
-            .worlds
+        let levels = ldtk_json.worlds
             .iter()
             .flat_map(|world| world.levels.iter().cloned())
             .collect();
 
         ldtk_json.worlds.iter_mut().for_each(|world| {
-            world
-                .levels
-                .iter_mut()
-                .for_each(|level| level.layer_instances = None)
+            world.levels.iter_mut().for_each(|level| {
+                level.layer_instances = None;
+            })
         });
 
         ldtk_json.external_levels = true;

@@ -6,8 +6,7 @@ pub struct CoinPlugin;
 
 impl Plugin for CoinPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, collect)
-            .register_ldtk_entity::<CoinBundle>("Coin");
+        app.add_systems(Update, collect).register_ldtk_entity::<CoinBundle>("Coin");
     }
 }
 
@@ -29,12 +28,12 @@ pub struct Wallet {
     coins: u32,
 }
 
-const COLLECT_DISTANCE: f32 = 12.;
+const COLLECT_DISTANCE: f32 = 12.0;
 
 fn collect(
     mut commands: Commands,
     mut wallets: Query<(&mut Wallet, &GlobalTransform)>,
-    coins: Query<(Entity, &GlobalTransform), With<Coin>>,
+    coins: Query<(Entity, &GlobalTransform), With<Coin>>
 ) {
     for (mut wallet, wallet_transform) in wallets.iter_mut() {
         for (coin_entity, coin_transform) in coins.iter() {
@@ -44,9 +43,7 @@ fn collect(
                 continue;
             }
 
-            let distance = wallet_transform
-                .translation()
-                .distance(coin_transform.translation());
+            let distance = wallet_transform.translation().distance(coin_transform.translation());
 
             if distance <= COLLECT_DISTANCE {
                 wallet.coins += 1;

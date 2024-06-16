@@ -1,10 +1,10 @@
 use crate::{
-    assets::{LdtkJsonWithMetadata, LevelMetadata, LevelMetadataAccessor},
-    ldtk::{LdtkJson, Level},
+    assets::{ LdtkJsonWithMetadata, LevelMetadata, LevelMetadataAccessor },
+    ldtk::{ LdtkJson, Level },
     prelude::RawLevelAccessor,
 };
 use bevy::reflect::Reflect;
-use derive_more::{From, TryInto};
+use derive_more::{ From, TryInto };
 
 #[cfg(feature = "internal_levels")]
 use crate::assets::InternalLevels;
@@ -106,28 +106,26 @@ impl LevelMetadataAccessor for LdtkProjectData {
 pub mod internal_level_tests {
     use crate::{
         assets::ldtk_json_with_metadata::tests::LdtkJsonWithMetadataFaker,
-        ldtk::fake::{LoadedLevelsFaker, MixedLevelsLdtkJsonFaker},
+        ldtk::fake::{ LoadedLevelsFaker, MixedLevelsLdtkJsonFaker },
     };
     use derive_more::Constructor;
 
     use super::*;
-    use fake::{Dummy, Fake, Faker};
+    use fake::{ Dummy, Fake, Faker };
 
     #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Constructor)]
     pub struct StandaloneLdtkProjectDataFaker<F>
-    where
-        LdtkJsonWithMetadata<InternalLevels>: Dummy<F>,
-    {
+        where LdtkJsonWithMetadata<InternalLevels>: Dummy<F> {
         pub ldtk_json_with_metadata_faker: F,
     }
 
-    impl<F> Dummy<StandaloneLdtkProjectDataFaker<F>> for LdtkProjectData
-    where
-        LdtkJsonWithMetadata<InternalLevels>: Dummy<F>,
+    impl<F> Dummy<StandaloneLdtkProjectDataFaker<F>>
+        for LdtkProjectData
+        where LdtkJsonWithMetadata<InternalLevels>: Dummy<F>
     {
         fn dummy_with_rng<R: rand::Rng + ?Sized>(
             config: &StandaloneLdtkProjectDataFaker<F>,
-            rng: &mut R,
+            rng: &mut R
         ) -> Self {
             LdtkProjectData::Standalone(config.ldtk_json_with_metadata_faker.fake_with_rng(rng))
         }
@@ -148,11 +146,11 @@ pub mod internal_level_tests {
 
     #[test]
     fn raw_level_accessor_implementation_is_transparent() {
-        let project: LdtkProjectData =
-            StandaloneLdtkProjectDataFaker::new(LdtkJsonWithMetadataFaker::new(
-                MixedLevelsLdtkJsonFaker::new(LoadedLevelsFaker::default(), 4..8),
-            ))
-            .fake();
+        let project: LdtkProjectData = StandaloneLdtkProjectDataFaker::new(
+            LdtkJsonWithMetadataFaker::new(
+                MixedLevelsLdtkJsonFaker::new(LoadedLevelsFaker::default(), 4..8)
+            )
+        ).fake();
 
         assert_eq!(project.root_levels(), project.json_data().root_levels());
         assert_eq!(project.worlds(), project.json_data().worlds());
@@ -165,16 +163,11 @@ pub mod internal_level_tests {
         for level in &project.json_data().levels {
             assert_eq!(
                 project.get_level_metadata_by_iid(&level.iid),
-                project
-                    .as_standalone()
-                    .get_level_metadata_by_iid(&level.iid),
+                project.as_standalone().get_level_metadata_by_iid(&level.iid)
             );
         }
 
-        assert_eq!(
-            project.get_level_metadata_by_iid(&"This_level_doesnt_exist".to_string()),
-            None
-        );
+        assert_eq!(project.get_level_metadata_by_iid(&"This_level_doesnt_exist".to_string()), None);
     }
 
     #[cfg(feature = "external_levels")]
@@ -192,28 +185,25 @@ pub mod internal_level_tests {
 pub mod external_level_tests {
     use crate::{
         assets::ldtk_json_with_metadata::tests::LdtkJsonWithMetadataFaker,
-        ldtk::fake::{LoadedLevelsFaker, MixedLevelsLdtkJsonFaker},
+        ldtk::fake::{ LoadedLevelsFaker, MixedLevelsLdtkJsonFaker },
     };
     use derive_more::Constructor;
 
     use super::*;
-    use fake::{Dummy, Fake, Faker};
+    use fake::{ Dummy, Fake, Faker };
 
     #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Constructor)]
-    pub struct ParentLdtkProjectDataFaker<F>
-    where
-        LdtkJsonWithMetadata<ExternalLevels>: Dummy<F>,
-    {
+    pub struct ParentLdtkProjectDataFaker<F> where LdtkJsonWithMetadata<ExternalLevels>: Dummy<F> {
         pub ldtk_json_with_metadata_faker: F,
     }
 
-    impl<F> Dummy<ParentLdtkProjectDataFaker<F>> for LdtkProjectData
-    where
-        LdtkJsonWithMetadata<ExternalLevels>: Dummy<F>,
+    impl<F> Dummy<ParentLdtkProjectDataFaker<F>>
+        for LdtkProjectData
+        where LdtkJsonWithMetadata<ExternalLevels>: Dummy<F>
     {
         fn dummy_with_rng<R: rand::Rng + ?Sized>(
             config: &ParentLdtkProjectDataFaker<F>,
-            rng: &mut R,
+            rng: &mut R
         ) -> Self {
             LdtkProjectData::Parent(config.ldtk_json_with_metadata_faker.fake_with_rng(rng))
         }
@@ -234,11 +224,11 @@ pub mod external_level_tests {
 
     #[test]
     fn raw_level_accessor_implementation_is_transparent() {
-        let project: LdtkProjectData =
-            ParentLdtkProjectDataFaker::new(LdtkJsonWithMetadataFaker::new(
-                MixedLevelsLdtkJsonFaker::new(LoadedLevelsFaker::default(), 4..8),
-            ))
-            .fake();
+        let project: LdtkProjectData = ParentLdtkProjectDataFaker::new(
+            LdtkJsonWithMetadataFaker::new(
+                MixedLevelsLdtkJsonFaker::new(LoadedLevelsFaker::default(), 4..8)
+            )
+        ).fake();
 
         assert_eq!(project.root_levels(), project.json_data().root_levels());
         assert_eq!(project.worlds(), project.json_data().worlds());
@@ -251,14 +241,11 @@ pub mod external_level_tests {
         for level in &project.json_data().levels {
             assert_eq!(
                 project.get_level_metadata_by_iid(&level.iid),
-                project.as_parent().get_level_metadata_by_iid(&level.iid),
+                project.as_parent().get_level_metadata_by_iid(&level.iid)
             );
         }
 
-        assert_eq!(
-            project.get_level_metadata_by_iid(&"This_level_doesnt_exist".to_string()),
-            None
-        );
+        assert_eq!(project.get_level_metadata_by_iid(&"This_level_doesnt_exist".to_string()), None);
     }
 
     #[cfg(feature = "internal_levels")]

@@ -1,10 +1,10 @@
 use crate::{
-    components::{EntityInstanceBundle, GridCoords, Worldly},
-    ldtk::{EntityInstance, LayerInstance, TilesetDefinition},
+    components::{ EntityInstanceBundle, GridCoords, Worldly },
+    ldtk::{ EntityInstance, LayerInstance, TilesetDefinition },
     utils,
 };
-use bevy::{ecs::system::EntityCommands, prelude::*};
-use std::{collections::HashMap, marker::PhantomData};
+use bevy::{ ecs::system::EntityCommands, prelude::* };
+use std::{ collections::HashMap, marker::PhantomData };
 
 /// [LdtkEntityAppExt]: super::LdtkEntityAppExt
 /// [Bundle]: bevy::prelude::Bundle
@@ -62,7 +62,7 @@ use std::{collections::HashMap, marker::PhantomData};
 ///
 /// By default, each component or nested bundle in the bundle will be consumed from bundle's
 /// [Default] implementation, which means that deriving (or implementing manually) [Default]
-/// is required (unless all fields are overriden, see below).
+/// is required (unless all fields are overridden, see below).
 /// However, this behavior can be overridden with some field attribute macros...
 ///
 /// ### `#[sprite_bundle...]`
@@ -300,7 +300,7 @@ pub trait LdtkEntity {
         tileset: Option<&Handle<Image>>,
         tileset_definition: Option<&TilesetDefinition>,
         asset_server: &AssetServer,
-        texture_atlases: &mut Assets<TextureAtlasLayout>,
+        texture_atlases: &mut Assets<TextureAtlasLayout>
     ) -> Self;
 }
 
@@ -311,7 +311,7 @@ impl LdtkEntity for EntityInstanceBundle {
         _: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
         _: &AssetServer,
-        _: &mut Assets<TextureAtlasLayout>,
+        _: &mut Assets<TextureAtlasLayout>
     ) -> Self {
         EntityInstanceBundle {
             entity_instance: entity_instance.clone(),
@@ -326,7 +326,7 @@ impl LdtkEntity for SpriteBundle {
         tileset: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
         _: &AssetServer,
-        _: &mut Assets<TextureAtlasLayout>,
+        _: &mut Assets<TextureAtlasLayout>
     ) -> Self {
         utils::sprite_bundle_from_entity_info(tileset)
     }
@@ -339,14 +339,14 @@ impl LdtkEntity for SpriteSheetBundle {
         tileset: Option<&Handle<Image>>,
         tileset_definition: Option<&TilesetDefinition>,
         _: &AssetServer,
-        texture_atlases: &mut Assets<TextureAtlasLayout>,
+        texture_atlases: &mut Assets<TextureAtlasLayout>
     ) -> Self {
         utils::sprite_sheet_bundle_from_entity_info(
             entity_instance,
             tileset,
             tileset_definition,
             texture_atlases,
-            true,
+            true
         )
     }
 }
@@ -358,7 +358,7 @@ impl LdtkEntity for Worldly {
         _: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
         _: &AssetServer,
-        _: &mut Assets<TextureAtlasLayout>,
+        _: &mut Assets<TextureAtlasLayout>
     ) -> Worldly {
         Worldly::from_entity_info(entity_instance)
     }
@@ -371,7 +371,7 @@ impl LdtkEntity for GridCoords {
         _: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
         _: &AssetServer,
-        _: &mut Assets<TextureAtlasLayout>,
+        _: &mut Assets<TextureAtlasLayout>
     ) -> Self {
         GridCoords::from_entity_info(entity_instance, layer_instance)
     }
@@ -400,7 +400,7 @@ pub trait PhantomLdtkEntityTrait {
         tileset: Option<&Handle<Image>>,
         tileset_definition: Option<&TilesetDefinition>,
         asset_server: &AssetServer,
-        texture_atlases: &mut Assets<TextureAtlasLayout>,
+        texture_atlases: &mut Assets<TextureAtlasLayout>
     ) -> &'b mut EntityCommands<'a>;
 }
 
@@ -413,16 +413,18 @@ impl<B: LdtkEntity + Bundle> PhantomLdtkEntityTrait for PhantomLdtkEntity<B> {
         tileset: Option<&Handle<Image>>,
         tileset_definition: Option<&TilesetDefinition>,
         asset_server: &AssetServer,
-        texture_atlases: &mut Assets<TextureAtlasLayout>,
+        texture_atlases: &mut Assets<TextureAtlasLayout>
     ) -> &'b mut EntityCommands<'a> {
-        entity_commands.insert(B::bundle_entity(
-            entity_instance,
-            layer_instance,
-            tileset,
-            tileset_definition,
-            asset_server,
-            texture_atlases,
-        ))
+        entity_commands.insert(
+            B::bundle_entity(
+                entity_instance,
+                layer_instance,
+                tileset,
+                tileset_definition,
+                asset_server,
+                texture_atlases
+            )
+        )
     }
 }
 

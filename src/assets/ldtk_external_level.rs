@@ -1,8 +1,8 @@
 use std::io;
 
-use crate::ldtk::{loaded_level::LoadedLevel, Level};
+use crate::ldtk::{ loaded_level::LoadedLevel, Level };
 use bevy::{
-    asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
+    asset::{ io::Reader, AssetLoader, AsyncReadExt, LoadContext },
     prelude::*,
     utils::BoxedFuture,
 };
@@ -33,8 +33,9 @@ impl LdtkExternalLevel {
 
     /// Internal LDtk level data as a [`LoadedLevel`].
     pub fn data(&self) -> LoadedLevel {
-        LoadedLevel::try_from(&self.data)
-            .expect("construction of LdtkExternalLevel should guarantee that the level is loaded.")
+        LoadedLevel::try_from(&self.data).expect(
+            "construction of LdtkExternalLevel should guarantee that the level is loaded."
+        )
     }
 }
 
@@ -65,7 +66,7 @@ impl AssetLoader for LdtkExternalLevelLoader {
         &'a self,
         reader: &'a mut Reader,
         _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext,
+        _load_context: &'a mut LoadContext
     ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
@@ -89,7 +90,7 @@ impl AssetLoader for LdtkExternalLevelLoader {
 
 #[cfg(test)]
 mod tests {
-    use fake::{Fake, Faker};
+    use fake::{ Fake, Faker };
 
     use crate::ldtk::fake::UnloadedLevelFaker;
 

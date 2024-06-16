@@ -66,9 +66,6 @@ mod tests {
         assert_eq!(LevelIid::from(original_string.clone()), level_iid);
         assert_eq!(String::from(level_iid.clone()), original_string);
         assert_eq!(level_iid.as_ref(), original_string.as_str());
-        assert_eq!(
-            format!("display: {level_iid}"),
-            format!("display: {original_string}")
-        );
+        assert_eq!(format!("display: {level_iid}"), format!("display: {original_string}"));
     }
 }

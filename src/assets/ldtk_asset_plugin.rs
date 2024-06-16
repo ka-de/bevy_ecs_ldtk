@@ -1,6 +1,6 @@
 #[cfg(feature = "external_levels")]
-use crate::assets::{ldtk_external_level::LdtkExternalLevelLoader, LdtkExternalLevel};
-use crate::assets::{ldtk_project::LdtkProjectLoader, LdtkProject};
+use crate::assets::{ ldtk_external_level::LdtkExternalLevelLoader, LdtkExternalLevel };
+use crate::assets::{ ldtk_project::LdtkProjectLoader, LdtkProject };
 use bevy::prelude::*;
 
 /// Plugin that registers LDtk-related assets.
@@ -9,8 +9,7 @@ pub struct LdtkAssetPlugin;
 
 impl Plugin for LdtkAssetPlugin {
     fn build(&self, app: &mut App) {
-        app.init_asset::<LdtkProject>()
-            .init_asset_loader::<LdtkProjectLoader>();
+        app.init_asset::<LdtkProject>().init_asset_loader::<LdtkProjectLoader>();
 
         #[cfg(feature = "external_levels")]
         {

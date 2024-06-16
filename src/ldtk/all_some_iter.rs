@@ -1,5 +1,5 @@
 //! Contains [`AllSomeIter`], for coercing a slice of options to an [`Iterator`] of non-options.
-use std::{iter::Flatten, slice::Iter};
+use std::{ iter::Flatten, slice::Iter };
 use thiserror::Error;
 
 /// Error that can occur when attempting to construct [AllSomeIter].

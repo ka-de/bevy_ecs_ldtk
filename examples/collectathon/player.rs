@@ -7,8 +7,10 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (move_player, level_selection_follow_player))
-            .register_ldtk_entity::<PlayerBundle>("Player");
+        app.add_systems(Update, (
+            move_player,
+            level_selection_follow_player,
+        )).register_ldtk_entity::<PlayerBundle>("Player");
     }
 }
 
@@ -26,12 +28,12 @@ struct PlayerBundle {
     sprite_sheet: SpriteSheetBundle,
 }
 
-const MOVEMENT_SPEED: f32 = 96.;
+const MOVEMENT_SPEED: f32 = 96.0;
 
 fn move_player(
     mut players: Query<&mut Transform, With<Player>>,
     input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
+    time: Res<Time>
 ) {
     for mut player_transform in players.iter_mut() {
         let mut movement = Vec2::ZERO;
@@ -51,7 +53,7 @@ fn move_player(
 
         if movement != Vec2::ZERO {
             player_transform.translation +=
-                movement.extend(0.) * MOVEMENT_SPEED * time.delta_seconds();
+                movement.extend(0.0) * MOVEMENT_SPEED * time.delta_seconds();
         }
     }
 }
@@ -61,7 +63,7 @@ fn level_selection_follow_player(
     levels: Query<(&LevelIid, &GlobalTransform)>,
     ldtk_projects: Query<&Handle<LdtkProject>>,
     ldtk_project_assets: Res<Assets<LdtkProject>>,
-    mut level_selection: ResMut<LevelSelection>,
+    mut level_selection: ResMut<LevelSelection>
 ) {
     if let Ok(player_transform) = players.get_single() {
         let ldtk_project = ldtk_project_assets
@@ -74,13 +76,10 @@ fn level_selection_follow_player(
                 .expect("level should exist in only project");
 
             let level_bounds = Rect {
-                min: Vec2::new(
-                    level_transform.translation().x,
-                    level_transform.translation().y,
-                ),
+                min: Vec2::new(level_transform.translation().x, level_transform.translation().y),
                 max: Vec2::new(
-                    level_transform.translation().x + level.px_wid as f32,
-                    level_transform.translation().y + level.px_hei as f32,
+                    level_transform.translation().x + (level.px_wid as f32),
+                    level_transform.translation().y + (level.px_hei as f32)
                 ),
             };
 

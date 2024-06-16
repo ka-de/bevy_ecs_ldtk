@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ecs_ldtk::{prelude::*, utils::ldtk_pixel_coords_to_translation_pivoted};
+use bevy_ecs_ldtk::{ prelude::*, utils::ldtk_pixel_coords_to_translation_pivoted };
 
 use std::collections::HashSet;
 
@@ -29,31 +29,34 @@ impl From<&EntityInstance> for ColliderBundle {
         let rotation_constraints = LockedAxes::ROTATION_LOCKED;
 
         match entity_instance.identifier.as_ref() {
-            "Player" => ColliderBundle {
-                collider: Collider::cuboid(6., 14.),
-                rigid_body: RigidBody::Dynamic,
-                friction: Friction {
-                    coefficient: 0.0,
-                    combine_rule: CoefficientCombineRule::Min,
+            "Player" =>
+                ColliderBundle {
+                    collider: Collider::cuboid(6.0, 14.0),
+                    rigid_body: RigidBody::Dynamic,
+                    friction: Friction {
+                        coefficient: 0.0,
+                        combine_rule: CoefficientCombineRule::Min,
+                    },
+                    rotation_constraints,
+                    ..Default::default()
                 },
-                rotation_constraints,
-                ..Default::default()
-            },
-            "Mob" => ColliderBundle {
-                collider: Collider::cuboid(5., 5.),
-                rigid_body: RigidBody::KinematicVelocityBased,
-                rotation_constraints,
-                ..Default::default()
-            },
-            "Chest" => ColliderBundle {
-                collider: Collider::cuboid(8., 8.),
-                rigid_body: RigidBody::Dynamic,
-                rotation_constraints,
-                gravity_scale: GravityScale(1.0),
-                friction: Friction::new(0.5),
-                density: ColliderMassProperties::Density(15.0),
-                ..Default::default()
-            },
+            "Mob" =>
+                ColliderBundle {
+                    collider: Collider::cuboid(5.0, 5.0),
+                    rigid_body: RigidBody::KinematicVelocityBased,
+                    rotation_constraints,
+                    ..Default::default()
+                },
+            "Chest" =>
+                ColliderBundle {
+                    collider: Collider::cuboid(8.0, 8.0),
+                    rigid_body: RigidBody::Dynamic,
+                    rotation_constraints,
+                    gravity_scale: GravityScale(1.0),
+                    friction: Friction::new(0.5),
+                    density: ColliderMassProperties::Density(15.0),
+                    ..Default::default()
+                },
             _ => ColliderBundle::default(),
         }
     }
@@ -66,7 +69,7 @@ impl From<IntGridCell> for SensorBundle {
         // ladder
         if int_grid_cell.value == 2 {
             SensorBundle {
-                collider: Collider::cuboid(8., 8.),
+                collider: Collider::cuboid(8.0, 8.0),
                 sensor: Sensor,
                 rotation_constraints,
                 active_events: ActiveEvents::COLLISION_EVENTS,
@@ -87,7 +90,7 @@ impl From<&EntityInstance> for Items {
                 .iter_enums_field("items")
                 .expect("items field should be correctly typed")
                 .cloned()
-                .collect(),
+                .collect()
         )
     }
 }
@@ -157,15 +160,17 @@ impl LdtkEntity for Patrol {
         _: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
         _: &AssetServer,
-        _: &mut Assets<TextureAtlasLayout>,
+        _: &mut Assets<TextureAtlasLayout>
     ) -> Patrol {
         let mut points = Vec::new();
-        points.push(ldtk_pixel_coords_to_translation_pivoted(
-            entity_instance.px,
-            layer_instance.c_hei * layer_instance.grid_size,
-            IVec2::new(entity_instance.width, entity_instance.height),
-            entity_instance.pivot,
-        ));
+        points.push(
+            ldtk_pixel_coords_to_translation_pivoted(
+                entity_instance.px,
+                layer_instance.c_hei * layer_instance.grid_size,
+                IVec2::new(entity_instance.width, entity_instance.height),
+                entity_instance.pivot
+            )
+        );
 
         let ldtk_patrol_points = entity_instance
             .iter_points_field("patrol")
@@ -177,15 +182,18 @@ impl LdtkEntity for Patrol {
             // The patrols set up in the file look flat and grounded,
             // but technically they're not if you consider the pivot,
             // which is at the bottom-center for the skulls.
-            let pixel_coords = (ldtk_point.as_vec2() + Vec2::new(0.5, 1.))
-                * Vec2::splat(layer_instance.grid_size as f32);
+            let pixel_coords =
+                (ldtk_point.as_vec2() + Vec2::new(0.5, 1.0)) *
+                Vec2::splat(layer_instance.grid_size as f32);
 
-            points.push(ldtk_pixel_coords_to_translation_pivoted(
-                pixel_coords.as_ivec2(),
-                layer_instance.c_hei * layer_instance.grid_size,
-                IVec2::new(entity_instance.width, entity_instance.height),
-                entity_instance.pivot,
-            ));
+            points.push(
+                ldtk_pixel_coords_to_translation_pivoted(
+                    pixel_coords.as_ivec2(),
+                    layer_instance.c_hei * layer_instance.grid_size,
+                    IVec2::new(entity_instance.width, entity_instance.height),
+                    entity_instance.pivot
+                )
+            );
         }
 
         Patrol {

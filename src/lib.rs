@@ -57,25 +57,45 @@ pub mod prelude {
     //! `use bevy_ecs_ldtk::prelude::*;` to import commonly used items.
 
     pub use crate::{
-        app::{LdtkEntity, LdtkEntityAppExt, LdtkIntCell, LdtkIntCellAppExt},
-        assets::{LdtkProject, LevelIndices, LevelMetadataAccessor},
+        app::{ LdtkEntity, LdtkEntityAppExt, LdtkIntCell, LdtkIntCellAppExt },
+        assets::{ LdtkProject, LevelIndices, LevelMetadataAccessor },
         components::{
-            EntityIid, EntityInstance, GridCoords, IntGridCell, LayerMetadata, LdtkWorldBundle,
-            LevelIid, LevelSet, Respawn, TileEnumTags, TileMetadata, Worldly,
+            EntityIid,
+            EntityInstance,
+            GridCoords,
+            IntGridCell,
+            LayerMetadata,
+            LdtkWorldBundle,
+            LevelIid,
+            LevelSet,
+            Respawn,
+            TileEnumTags,
+            TileMetadata,
+            Worldly,
         },
         ldtk::{
-            self, ldtk_fields::LdtkFields, raw_level_accessor::RawLevelAccessor, FieldValue,
-            LayerInstance, TilesetDefinition,
+            self,
+            ldtk_fields::LdtkFields,
+            raw_level_accessor::RawLevelAccessor,
+            FieldValue,
+            LayerInstance,
+            TilesetDefinition,
         },
-        plugin::{LdtkPlugin, ProcessLdtkApi},
+        plugin::{ LdtkPlugin, ProcessLdtkApi },
         resources::{
-            IntGridRendering, LdtkSettings, LevelBackground, LevelEvent, LevelSelection,
-            LevelSpawnBehavior, SetClearColor, SpawnExclusions,
+            IntGridRendering,
+            LdtkSettings,
+            LevelBackground,
+            LevelEvent,
+            LevelSelection,
+            LevelSpawnBehavior,
+            SetClearColor,
+            SpawnExclusions,
         },
     };
 
     #[cfg(feature = "derive")]
-    pub use crate::{LdtkEntity, LdtkIntCell};
+    pub use crate::{ LdtkEntity, LdtkIntCell };
 
     #[cfg(feature = "external_levels")]
     pub use crate::assets::LdtkExternalLevel;

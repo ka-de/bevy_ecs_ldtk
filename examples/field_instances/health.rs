@@ -13,7 +13,7 @@ impl Health {
         Health(
             *entity_instance
                 .get_int_field("health")
-                .expect("expected entity to have non-nullable health int field"),
+                .expect("expected entity to have non-nullable health int field")
         )
     }
 }

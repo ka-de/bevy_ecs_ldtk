@@ -1,5 +1,5 @@
 use crate::assets::LevelIndices;
-use bevy::{prelude::*, reflect::Reflect};
+use bevy::{ prelude::*, reflect::Reflect };
 use derive_getters::Getters;
 
 #[cfg(feature = "external_levels")]
@@ -59,10 +59,10 @@ mod tests {
 
         let level_metadata = LevelMetadata::new(
             Some(Handle::<Image>::default()),
-            LevelIndices::in_world(2, 3),
+            LevelIndices::in_world(2, 3)
         );
 
-        assert_eq!(*level_metadata.bg_image(), Some(Handle::<Image>::default()),);
+        assert_eq!(*level_metadata.bg_image(), Some(Handle::<Image>::default()));
         assert_eq!(*level_metadata.indices(), LevelIndices::in_world(2, 3));
     }
 
@@ -71,13 +71,12 @@ mod tests {
     fn external_level_metadata_construction() {
         let level_metadata = LevelMetadata::new(None, LevelIndices::in_root(1));
 
-        let external_level_metadata =
-            ExternalLevelMetadata::new(level_metadata.clone(), Handle::default());
-
-        assert_eq!(*external_level_metadata.metadata(), level_metadata);
-        assert_eq!(
-            *external_level_metadata.external_handle(),
+        let external_level_metadata = ExternalLevelMetadata::new(
+            level_metadata.clone(),
             Handle::default()
         );
+
+        assert_eq!(*external_level_metadata.metadata(), level_metadata);
+        assert_eq!(*external_level_metadata.external_handle(), Handle::default());
     }
 }

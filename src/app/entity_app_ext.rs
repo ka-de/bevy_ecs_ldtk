@@ -30,7 +30,7 @@ pub trait LdtkEntityAppExt {
     fn register_ldtk_entity_for_layer_optional<B: LdtkEntity + Bundle>(
         &mut self,
         layer_identifier: Option<String>,
-        entity_identifier: Option<String>,
+        entity_identifier: Option<String>
     ) -> &mut Self;
 
     /// Registers [LdtkEntity] types to be spawned for a given Entity identifier and layer
@@ -68,11 +68,11 @@ pub trait LdtkEntityAppExt {
     fn register_ldtk_entity_for_layer<B: LdtkEntity + Bundle>(
         &mut self,
         layer_identifier: &str,
-        entity_identifier: &str,
+        entity_identifier: &str
     ) -> &mut Self {
         self.register_ldtk_entity_for_layer_optional::<B>(
             Some(layer_identifier.to_string()),
-            Some(entity_identifier.to_string()),
+            Some(entity_identifier.to_string())
         )
     }
 
@@ -80,7 +80,7 @@ pub trait LdtkEntityAppExt {
     /// registration to all layers.
     fn register_ldtk_entity<B: LdtkEntity + Bundle>(
         &mut self,
-        entity_identifier: &str,
+        entity_identifier: &str
     ) -> &mut Self {
         self.register_ldtk_entity_for_layer_optional::<B>(None, Some(entity_identifier.to_string()))
     }
@@ -89,7 +89,7 @@ pub trait LdtkEntityAppExt {
     /// registration to all entities on the given layer.
     fn register_default_ldtk_entity_for_layer<B: LdtkEntity + Bundle>(
         &mut self,
-        layer_identifier: &str,
+        layer_identifier: &str
     ) -> &mut Self {
         self.register_ldtk_entity_for_layer_optional::<B>(Some(layer_identifier.to_string()), None)
     }
@@ -105,7 +105,7 @@ impl LdtkEntityAppExt for App {
     fn register_ldtk_entity_for_layer_optional<B: LdtkEntity + Bundle>(
         &mut self,
         layer_identifier: Option<String>,
-        entity_identifier: Option<String>,
+        entity_identifier: Option<String>
     ) -> &mut Self {
         let new_entry = Box::new(PhantomLdtkEntity::<B>::new());
         match self.world.get_non_send_resource_mut::<LdtkEntityMap>() {
@@ -115,8 +115,7 @@ impl LdtkEntityAppExt for App {
             None => {
                 let mut bundle_map = LdtkEntityMap::new();
                 bundle_map.insert((layer_identifier, entity_identifier), new_entry);
-                self.world
-                    .insert_non_send_resource::<LdtkEntityMap>(bundle_map);
+                self.world.insert_non_send_resource::<LdtkEntityMap>(bundle_map);
             }
         }
         self
@@ -126,10 +125,7 @@ impl LdtkEntityAppExt for App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        components::EntityInstance,
-        ldtk::{LayerInstance, TilesetDefinition},
-    };
+    use crate::{ components::EntityInstance, ldtk::{ LayerInstance, TilesetDefinition } };
 
     #[derive(Default, Component, Debug)]
     struct ComponentA;
@@ -150,7 +146,7 @@ mod tests {
             _: Option<&Handle<Image>>,
             _: Option<&TilesetDefinition>,
             _: &AssetServer,
-            _: &mut Assets<TextureAtlasLayout>,
+            _: &mut Assets<TextureAtlasLayout>
         ) -> LdtkEntityBundle {
             LdtkEntityBundle::default()
         }
@@ -166,14 +162,17 @@ mod tests {
 
         let ldtk_entity_map = app.world.get_non_send_resource::<LdtkEntityMap>().unwrap();
 
-        assert!(ldtk_entity_map.contains_key(&(
-            Some("layer".to_string()),
-            Some("entity_for_layer".to_string())
-        )));
+        assert!(
+            ldtk_entity_map.contains_key(
+                &(Some("layer".to_string()), Some("entity_for_layer".to_string()))
+            )
+        );
 
         assert!(ldtk_entity_map.contains_key(&(None, Some("entity".to_string()))));
 
-        assert!(ldtk_entity_map.contains_key(&(Some("default_entity_for_layer".to_string()), None)));
+        assert!(
+            ldtk_entity_map.contains_key(&(Some("default_entity_for_layer".to_string()), None))
+        );
 
         assert!(ldtk_entity_map.contains_key(&(None, None)));
     }

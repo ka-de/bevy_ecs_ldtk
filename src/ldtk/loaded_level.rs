@@ -1,6 +1,11 @@
 //! Contains [`LoadedLevel`] and related types/implementaions.
 use crate::ldtk::{
-    ldtk_fields::LdtkFields, BgPos, FieldInstance, LayerInstance, Level, LevelBackgroundPosition,
+    ldtk_fields::LdtkFields,
+    BgPos,
+    FieldInstance,
+    LayerInstance,
+    Level,
+    LevelBackgroundPosition,
     NeighbourLevel,
 };
 use bevy::prelude::Color;
@@ -120,8 +125,7 @@ impl<'a> LoadedLevel<'a> {
 
     /// An array containing all Layer instances.
     pub fn layer_instances(&self) -> &Vec<LayerInstance> {
-        self.level
-            .layer_instances
+        self.level.layer_instances
             .as_ref()
             .expect("LoadedLevel construction should guarantee the existence of layer instances")
     }
@@ -189,8 +193,8 @@ mod tests {
             neighbours: vec![NeighbourLevel::default()],
             smart_color: Color::BEIGE,
             level_bg_color: Some(Color::CYAN),
-            bg_pivot_x: 0.,
-            bg_pivot_y: 1.,
+            bg_pivot_x: 0.0,
+            bg_pivot_y: 1.0,
             level_bg_pos: Some(BgPos::Cover),
             bg_rel_path: Some("path/to/bg.png".to_string()),
             external_rel_path: Some("path/to/external.ldtkl".to_string()),
@@ -224,14 +228,11 @@ mod tests {
         assert_eq!(*loaded.neighbours(), vec![NeighbourLevel::default()]);
         assert_eq!(*loaded.smart_color(), Color::BEIGE);
         assert_eq!(*loaded.level_bg_color(), Some(Color::CYAN));
-        assert_eq!(*loaded.bg_pivot_x(), 0.);
-        assert_eq!(*loaded.bg_pivot_y(), 1.);
+        assert_eq!(*loaded.bg_pivot_x(), 0.0);
+        assert_eq!(*loaded.bg_pivot_y(), 1.0);
         assert_eq!(*loaded.level_bg_pos(), Some(BgPos::Cover));
         assert_eq!(*loaded.bg_rel_path(), Some("path/to/bg.png".to_string()));
-        assert_eq!(
-            *loaded.external_rel_path(),
-            Some("path/to/external.ldtkl".to_string())
-        );
+        assert_eq!(*loaded.external_rel_path(), Some("path/to/external.ldtkl".to_string()));
         assert_eq!(*loaded.field_instances(), vec![]);
         assert_eq!(*loaded.identifier(), "level_identifier".to_string());
         assert_eq!(*loaded.iid(), "level_iid".to_string());

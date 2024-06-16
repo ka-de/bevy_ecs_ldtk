@@ -1,7 +1,12 @@
 //! Contains [`LdtkFields`] trait, providing convenience methods for accessing field instances.
 use crate::ldtk::{
-    all_some_iter::AllSomeIter, EntityInstance, FieldInstance, FieldValue, Level,
-    ReferenceToAnEntityInstance, TilesetRectangle,
+    all_some_iter::AllSomeIter,
+    EntityInstance,
+    FieldInstance,
+    FieldValue,
+    Level,
+    ReferenceToAnEntityInstance,
+    TilesetRectangle,
 };
 use bevy::prelude::*;
 use paste::paste;
@@ -12,13 +17,19 @@ use thiserror::Error;
 pub enum LdtkFieldsError {
     /// Could not find a field instance with the given identifier.
     #[error("could not find {identifier} field")]
-    FieldNotFound { identifier: String },
+    FieldNotFound {
+        identifier: String,
+    },
     /// The field instance exists, but is the wrong [`FieldValue`] variant.
     #[error("found {identifier} field, but its type is not correct")]
-    WrongFieldType { identifier: String },
+    WrongFieldType {
+        identifier: String,
+    },
     /// The field instance exists and is the correct variant, but the value is null.
     #[error("found {identifier} field of the correct type, but the value is null")]
-    UnexpectedNull { identifier: String },
+    UnexpectedNull {
+        identifier: String,
+    },
 }
 
 /// Base macro for generating a method that accesses a field instance and unwraps its [FieldValue]
@@ -45,7 +56,7 @@ macro_rules! create_base_get_field_method {
                 }
             }
         }
-    }
+    };
 }
 
 /// Generates a `get_type_field` method corresponding to a `get_maybe_type_field` method,
@@ -99,7 +110,7 @@ macro_rules! create_get_maybe_field_method {
         paste! {
             create_base_get_field_method!("nullable ", [< maybe_ $variant:snake >], $variant, $maybe_type);
         }
-    }
+    };
 }
 
 /// Generates a `get_type_field` method for the given [FieldValue] variant,
@@ -259,87 +270,74 @@ mod tests {
             field_instance_from_value("EntityRefNone", EntityRef(None)),
             field_instance_from_value(
                 "EntityRefSome",
-                EntityRef(Some(ReferenceToAnEntityInstance::default())),
+                EntityRef(Some(ReferenceToAnEntityInstance::default()))
             ),
             field_instance_from_value("PointNone", Point(None)),
             field_instance_from_value("PointSome", Point(Some(IVec2::default()))),
             field_instance_from_value("IntsNullable", Ints(vec![None, Some(5)])),
             field_instance_from_value("Ints", Ints(vec![Some(6), Some(7)])),
-            field_instance_from_value("FloatsNullable", Floats(vec![None, Some(8.)])),
-            field_instance_from_value("Floats", Floats(vec![Some(9.), Some(10.)])),
+            field_instance_from_value("FloatsNullable", Floats(vec![None, Some(8.0)])),
+            field_instance_from_value("Floats", Floats(vec![Some(9.0), Some(10.0)])),
             field_instance_from_value("Bools", Bools(vec![false, true])),
             field_instance_from_value(
                 "StringsNullable",
-                Strings(vec![None, Some("eleven".to_string())]),
+                Strings(vec![None, Some("eleven".to_string())])
             ),
             field_instance_from_value(
                 "Strings",
-                Strings(vec![
-                    Some("twelve".to_string()),
-                    Some("thirteen".to_string()),
-                ]),
+                Strings(vec![Some("twelve".to_string()), Some("thirteen".to_string())])
             ),
             field_instance_from_value(
                 "Colors",
-                Colors(vec![
-                    bevy::prelude::Color::BLACK,
-                    bevy::prelude::Color::WHITE,
-                ]),
+                Colors(vec![bevy::prelude::Color::BLACK, bevy::prelude::Color::WHITE])
             ),
             field_instance_from_value(
                 "FilePathsNullable",
-                FilePaths(vec![None, Some("fourteen".to_string())]),
+                FilePaths(vec![None, Some("fourteen".to_string())])
             ),
             field_instance_from_value(
                 "FilePaths",
-                FilePaths(vec![
-                    Some("fifteen".to_string()),
-                    Some("sixteen".to_string()),
-                ]),
+                FilePaths(vec![Some("fifteen".to_string()), Some("sixteen".to_string())])
             ),
             field_instance_from_value(
                 "EnumsNullable",
-                Enums(vec![None, Some("Seventeen".to_string())]),
+                Enums(vec![None, Some("Seventeen".to_string())])
             ),
             field_instance_from_value(
                 "Enums",
-                Enums(vec![
-                    Some("Eighteen".to_string()),
-                    Some("Nineteen".to_string()),
-                ]),
+                Enums(vec![Some("Eighteen".to_string()), Some("Nineteen".to_string())])
             ),
             field_instance_from_value(
                 "TilesNullable",
-                Tiles(vec![None, Some(TilesetRectangle::default())]),
+                Tiles(vec![None, Some(TilesetRectangle::default())])
             ),
             field_instance_from_value(
                 "Tiles",
-                Tiles(vec![
-                    Some(TilesetRectangle::default()),
-                    Some(TilesetRectangle::default()),
-                ]),
+                Tiles(vec![Some(TilesetRectangle::default()), Some(TilesetRectangle::default())])
             ),
             field_instance_from_value(
                 "EntityRefsNullable",
-                EntityRefs(vec![None, Some(ReferenceToAnEntityInstance::default())]),
+                EntityRefs(vec![None, Some(ReferenceToAnEntityInstance::default())])
             ),
             field_instance_from_value(
                 "EntityRefs",
-                EntityRefs(vec![
-                    Some(ReferenceToAnEntityInstance::default()),
-                    Some(ReferenceToAnEntityInstance::default()),
-                ]),
+                EntityRefs(
+                    vec![
+                        Some(ReferenceToAnEntityInstance::default()),
+                        Some(ReferenceToAnEntityInstance::default())
+                    ]
+                )
             ),
             field_instance_from_value("PointsNullable", Points(vec![None, Some(IVec2::default())])),
             field_instance_from_value(
                 "Points",
-                Points(vec![Some(IVec2::default()), Some(IVec2::default())]),
-            ),
+                Points(vec![Some(IVec2::default()), Some(IVec2::default())])
+            )
         ]
     }
 
     macro_rules! test_ambiguous_get_field_method {
-        ($method_name:ident, $wrong_ident:literal, $( $ident:literal, $value:expr ),*) => {
+        ($method_name:ident, $wrong_ident:literal, $($ident:literal, $value:expr),*) => {
             paste! {
                 #[test]
                 fn [< test_ $method_name >]() {
@@ -365,7 +363,13 @@ mod tests {
     }
 
     macro_rules! test_just_get_field_method {
-        ($method_name:ident, $wrong_ident:literal, $nullable_ident:literal, $ident:literal, $value:expr) => {
+        (
+            $method_name:ident,
+            $wrong_ident:literal,
+            $nullable_ident:literal,
+            $ident:literal,
+            $value:expr
+        ) => {
             paste! {
                 #[test]
                 fn [< test_ $method_name >]() {
@@ -393,7 +397,13 @@ mod tests {
     }
 
     macro_rules! test_iter_fields_method {
-        ($method_name:ident, $wrong_ident:literal, $nullable_ident:literal, $ident:literal, $value:expr) => {
+        (
+            $method_name:ident,
+            $wrong_ident:literal,
+            $nullable_ident:literal,
+            $ident:literal,
+            $value:expr
+        ) => {
             paste! {
                 #[test]
                 fn [< test_ $method_name >]() {
@@ -440,9 +450,9 @@ mod tests {
         "FloatNone",
         None,
         "FloatSome",
-        Some(1.)
+        Some(1.0)
     );
-    test_just_get_field_method!(get_float_field, "Bool", "FloatNone", "FloatSome", 1.);
+    test_just_get_field_method!(get_float_field, "Bool", "FloatNone", "FloatSome", 1.0);
 
     test_ambiguous_get_field_method!(get_bool_field, "Color", "Bool", true);
 
@@ -488,13 +498,7 @@ mod tests {
         "EnumSome",
         Some("Four".to_string())
     );
-    test_just_get_field_method!(
-        get_enum_field,
-        "Bool",
-        "EnumNone",
-        "EnumSome",
-        "Four".to_string()
-    );
+    test_just_get_field_method!(get_enum_field, "Bool", "EnumNone", "EnumSome", "Four".to_string());
 
     test_ambiguous_get_field_method!(
         get_maybe_tile_field,
@@ -558,17 +562,11 @@ mod tests {
         get_maybe_floats_field,
         "Bools",
         "FloatsNullable",
-        [None, Some(8.)],
+        [None, Some(8.0)],
         "Floats",
-        [Some(9.), Some(10.)]
+        [Some(9.0), Some(10.0)]
     );
-    test_iter_fields_method!(
-        iter_floats_field,
-        "Bools",
-        "FloatsNullable",
-        "Floats",
-        [9., 10.]
-    );
+    test_iter_fields_method!(iter_floats_field, "Bools", "FloatsNullable", "Floats", [9.0, 10.0]);
 
     test_ambiguous_get_field_method!(get_bools_field, "Colors", "Bools", [false, true]);
 
@@ -580,20 +578,15 @@ mod tests {
         "Strings",
         [Some("twelve".to_string()), Some("thirteen".to_string())]
     );
-    test_iter_fields_method!(
-        iter_strings_field,
-        "Bools",
-        "StringsNullable",
-        "Strings",
-        ["twelve".to_string(), "thirteen".to_string()]
-    );
+    test_iter_fields_method!(iter_strings_field, "Bools", "StringsNullable", "Strings", [
+        "twelve".to_string(),
+        "thirteen".to_string(),
+    ]);
 
-    test_ambiguous_get_field_method!(
-        get_colors_field,
-        "Bools",
-        "Colors",
-        [Color::BLACK, Color::WHITE]
-    );
+    test_ambiguous_get_field_method!(get_colors_field, "Bools", "Colors", [
+        Color::BLACK,
+        Color::WHITE,
+    ]);
 
     test_ambiguous_get_field_method!(
         get_maybe_file_paths_field,
@@ -603,13 +596,10 @@ mod tests {
         "FilePaths",
         [Some("fifteen".to_string()), Some("sixteen".to_string())]
     );
-    test_iter_fields_method!(
-        iter_file_paths_field,
-        "Bools",
-        "FilePathsNullable",
-        "FilePaths",
-        ["fifteen".to_string(), "sixteen".to_string()]
-    );
+    test_iter_fields_method!(iter_file_paths_field, "Bools", "FilePathsNullable", "FilePaths", [
+        "fifteen".to_string(),
+        "sixteen".to_string(),
+    ]);
 
     test_ambiguous_get_field_method!(
         get_maybe_enums_field,
@@ -619,13 +609,10 @@ mod tests {
         "Enums",
         [Some("Eighteen".to_string()), Some("Nineteen".to_string())]
     );
-    test_iter_fields_method!(
-        iter_enums_field,
-        "Bools",
-        "EnumsNullable",
-        "Enums",
-        ["Eighteen".to_string(), "Nineteen".to_string()]
-    );
+    test_iter_fields_method!(iter_enums_field, "Bools", "EnumsNullable", "Enums", [
+        "Eighteen".to_string(),
+        "Nineteen".to_string(),
+    ]);
 
     test_ambiguous_get_field_method!(
         get_maybe_tiles_field,
@@ -633,18 +620,12 @@ mod tests {
         "TilesNullable",
         [None, Some(TilesetRectangle::default())],
         "Tiles",
-        [
-            Some(TilesetRectangle::default()),
-            Some(TilesetRectangle::default())
-        ]
+        [Some(TilesetRectangle::default()), Some(TilesetRectangle::default())]
     );
-    test_iter_fields_method!(
-        iter_tiles_field,
-        "Bools",
-        "TilesNullable",
-        "Tiles",
-        [TilesetRectangle::default(), TilesetRectangle::default()]
-    );
+    test_iter_fields_method!(iter_tiles_field, "Bools", "TilesNullable", "Tiles", [
+        TilesetRectangle::default(),
+        TilesetRectangle::default(),
+    ]);
 
     test_ambiguous_get_field_method!(
         get_maybe_entity_refs_field,
@@ -652,21 +633,12 @@ mod tests {
         "EntityRefsNullable",
         [None, Some(ReferenceToAnEntityInstance::default())],
         "EntityRefs",
-        [
-            Some(ReferenceToAnEntityInstance::default()),
-            Some(ReferenceToAnEntityInstance::default())
-        ]
+        [Some(ReferenceToAnEntityInstance::default()), Some(ReferenceToAnEntityInstance::default())]
     );
-    test_iter_fields_method!(
-        iter_entity_refs_field,
-        "Bools",
-        "EntityRefsNullable",
-        "EntityRefs",
-        [
-            ReferenceToAnEntityInstance::default(),
-            ReferenceToAnEntityInstance::default()
-        ]
-    );
+    test_iter_fields_method!(iter_entity_refs_field, "Bools", "EntityRefsNullable", "EntityRefs", [
+        ReferenceToAnEntityInstance::default(),
+        ReferenceToAnEntityInstance::default(),
+    ]);
 
     test_ambiguous_get_field_method!(
         get_maybe_points_field,
@@ -676,11 +648,8 @@ mod tests {
         "Points",
         [Some(IVec2::default()), Some(IVec2::default())]
     );
-    test_iter_fields_method!(
-        iter_points_field,
-        "Bools",
-        "PointsNullable",
-        "Points",
-        [IVec2::default(), IVec2::default()]
-    );
+    test_iter_fields_method!(iter_points_field, "Bools", "PointsNullable", "Points", [
+        IVec2::default(),
+        IVec2::default(),
+    ]);
 }

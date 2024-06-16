@@ -25,11 +25,8 @@
 //! 11. `From<&EntityInstance>` implemented for [`EntityInstance`]
 //! 12. [`LayerInstance::layer_instance_type`] changed from [`String`] to [`Type`].
 
-use bevy::{
-    prelude::{Color, Component, IVec2, Vec2},
-    reflect::Reflect,
-};
-use serde::{Deserialize, Serialize};
+use bevy::{ prelude::{ Color, Component, IVec2, Vec2 }, reflect::Reflect };
+use serde::{ Deserialize, Serialize };
 use std::collections::HashMap;
 
 #[allow(unused_imports)]

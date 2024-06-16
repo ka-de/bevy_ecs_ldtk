@@ -17,7 +17,7 @@ impl UnresolvedMotherRef {
                 .get_maybe_entity_ref_field("mother")
                 .expect("expected entity to have mother entity ref field")
                 .as_ref()
-                .map(|entity_ref| EntityIid::new(entity_ref.entity_iid.clone())),
+                .map(|entity_ref| EntityIid::new(entity_ref.entity_iid.clone()))
         )
     }
 }
@@ -29,7 +29,7 @@ pub struct Mother(Entity);
 pub fn resolve_mother_references(
     mut commands: Commands,
     unresolved_mothers: Query<(Entity, &UnresolvedMotherRef), Added<UnresolvedMotherRef>>,
-    ldtk_entities: Query<(Entity, &EntityIid)>,
+    ldtk_entities: Query<(Entity, &EntityIid)>
 ) {
     for (child_entity, unresolved_mother_ref) in unresolved_mothers.iter() {
         if let Some(mother_iid) = unresolved_mother_ref.0.as_ref() {
@@ -43,9 +43,7 @@ pub fn resolve_mother_references(
                 .remove::<UnresolvedMotherRef>()
                 .insert(Mother(mother_entity));
         } else {
-            commands
-                .entity(child_entity)
-                .remove::<UnresolvedMotherRef>();
+            commands.entity(child_entity).remove::<UnresolvedMotherRef>();
         }
     }
 }

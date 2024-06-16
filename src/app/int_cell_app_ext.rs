@@ -30,7 +30,7 @@ pub trait LdtkIntCellAppExt {
     fn register_ldtk_int_cell_for_layer_optional<B: LdtkIntCell + Bundle>(
         &mut self,
         layer_identifier: Option<String>,
-        value: Option<i32>,
+        value: Option<i32>
     ) -> &mut Self;
 
     /// Registers [LdtkIntCell] types to be inserted for a given IntGrid value and layer identifier
@@ -68,11 +68,11 @@ pub trait LdtkIntCellAppExt {
     fn register_ldtk_int_cell_for_layer<B: LdtkIntCell + Bundle>(
         &mut self,
         layer_identifier: &str,
-        value: i32,
+        value: i32
     ) -> &mut Self {
         self.register_ldtk_int_cell_for_layer_optional::<B>(
             Some(layer_identifier.to_string()),
-            Some(value),
+            Some(value)
         )
     }
 
@@ -86,11 +86,11 @@ pub trait LdtkIntCellAppExt {
     /// registration to all tiles on the given layer.
     fn register_default_ldtk_int_cell_for_layer<B: LdtkIntCell + Bundle>(
         &mut self,
-        layer_identifier: &str,
+        layer_identifier: &str
     ) -> &mut Self {
         self.register_ldtk_int_cell_for_layer_optional::<B>(
             Some(layer_identifier.to_string()),
-            None,
+            None
         )
     }
 
@@ -105,7 +105,7 @@ impl LdtkIntCellAppExt for App {
     fn register_ldtk_int_cell_for_layer_optional<B: LdtkIntCell + Bundle>(
         &mut self,
         layer_identifier: Option<String>,
-        value: Option<i32>,
+        value: Option<i32>
     ) -> &mut Self {
         let new_entry = Box::new(PhantomLdtkIntCell::<B>::new());
         match self.world.get_non_send_resource_mut::<LdtkIntCellMap>() {
@@ -115,8 +115,7 @@ impl LdtkIntCellAppExt for App {
             None => {
                 let mut bundle_map = LdtkIntCellMap::new();
                 bundle_map.insert((layer_identifier, value), new_entry);
-                self.world
-                    .insert_non_send_resource::<LdtkIntCellMap>(bundle_map);
+                self.world.insert_non_send_resource::<LdtkIntCellMap>(bundle_map);
             }
         }
         self
@@ -126,7 +125,7 @@ impl LdtkIntCellAppExt for App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{components::IntGridCell, ldtk::LayerInstance};
+    use crate::{ components::IntGridCell, ldtk::LayerInstance };
 
     #[derive(Default, Component, Debug)]
     struct ComponentA;
@@ -152,7 +151,7 @@ mod tests {
         app.register_ldtk_int_cell_for_layer::<LdtkIntCellBundle>("layer", 1)
             .register_ldtk_int_cell::<LdtkIntCellBundle>(2)
             .register_default_ldtk_int_cell_for_layer::<LdtkIntCellBundle>(
-                "default_int_cell_for_layer",
+                "default_int_cell_for_layer"
             )
             .register_default_ldtk_int_cell::<LdtkIntCellBundle>();
 

@@ -14,7 +14,7 @@ pub fn set_level_title_to_current_level(
     levels: Query<&LevelIid>,
     projects: Query<&Handle<LdtkProject>>,
     project_assets: Res<Assets<LdtkProject>>,
-    mut current_level_title: ResMut<LevelTitle>,
+    mut current_level_title: ResMut<LevelTitle>
 ) {
     for level_event in level_events.read() {
         if matches!(level_event, LevelEvent::Transformed(_)) {

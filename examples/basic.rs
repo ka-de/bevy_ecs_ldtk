@@ -4,7 +4,7 @@ use bevy_ecs_ldtk::prelude::*;
 fn main() {
     App::new()
         .add_plugins(
-            DefaultPlugins.set(ImagePlugin::default_nearest()), // prevents blurry sprites
+            DefaultPlugins.set(ImagePlugin::default_nearest()) // prevents blurry sprites
         )
         .add_plugins(LdtkPlugin)
         .add_systems(Startup, setup)
