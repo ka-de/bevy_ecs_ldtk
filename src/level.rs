@@ -394,7 +394,7 @@ fn spawn_layer(
     match layer_instance.layer_instance_type {
         Type::Entities => spawn_entity_layer(layer_instance, context, data, layer_z, layer_offset),
         _ => if let Some(tile_data) = SpawnTileData::new(data, layer_instance) {
-            spawn_non_entity_layer(context, tile_data, layer_z, layer_offset)
+            spawn_non_entity_layer(context, tile_data, layer_z, layer_offset);
         }
     };
 }
@@ -503,9 +503,10 @@ impl<'a> SpawnTileData<'a> {
         let tileset_definition = layer_instance.tileset_def_uid.map(
             |u| *level_data.tileset_definition_map.get(&u).unwrap()
         );
-        let tile_size = tileset_definition
-            .map(|TilesetDefinition { tile_grid_size, .. }| *tile_grid_size)
-            .unwrap_or(layer_instance.grid_size) as f32;
+        let tile_size = tileset_definition.map_or(
+            layer_instance.grid_size,
+            |TilesetDefinition { tile_grid_size, .. }| *tile_grid_size
+        ) as f32;
         let tilemap_tile_size = TilemapTileSize {
             x: tile_size,
             y: tile_size,
@@ -567,7 +568,7 @@ impl<'a> SpawnTileData<'a> {
             .unwrap_or_default();
         let mut enum_tags_map: HashMap<i32, TileEnumTags> = HashMap::new();
         if let Some(tileset_definition) = tileset_definition {
-            for EnumTagValue { enum_value_id, tile_ids } in tileset_definition.enum_tags.iter() {
+            for EnumTagValue { enum_value_id, tile_ids } in &tileset_definition.enum_tags {
                 for tile_id in tile_ids {
                     enum_tags_map
                         .entry(*tile_id)
@@ -581,11 +582,11 @@ impl<'a> SpawnTileData<'a> {
         }
         Some(SpawnTileData {
             level_data,
-            size,
-            tileset_definition,
             layer_instance,
+            tileset_definition,
             metadata_map,
             enum_tags_map,
+            size,
             tilemap_grid_size,
             spacing,
             texture,
@@ -596,8 +597,8 @@ impl<'a> SpawnTileData<'a> {
 
 /// The remaining layers have a lot of shared code.
 /// This is because:
-/// 1. There is virtually no difference between AutoTile and Tile layers
-/// 2. IntGrid layers can sometimes have AutoTile functionality
+/// 1. There is virtually no difference between `AutoTile` and Tile layers
+/// 2. `IntGrid` layers can sometimes have `AutoTile` functionality
 fn spawn_non_entity_layer(
     context: &mut SpawnBaseContext,
     data: SpawnTileData,
@@ -704,72 +705,69 @@ fn spawn_intgrid_tilemap_bundle(
     let mut storage = TileStorage::empty(size);
     let layer_entity = context.commands.spawn_empty().id();
 
-    match data.tileset_definition {
-        Some(_) => {
-            set_all_tiles_with_func(
-                &mut context.commands,
-                &mut storage,
-                size,
-                TilemapId(layer_entity),
-                tile_pos_to_tile_grid_bundle_maker(
-                    tile_pos_to_transparent_tile_maker(
-                        tile_pos_to_int_grid_with_grid_tiles_tile_maker(
-                            &grid_tiles,
-                            &layer_instance.int_grid_csv,
-                            layer_instance.c_wid,
-                            layer_instance.c_hei,
-                            layer_instance.grid_size,
-                            sublayer_index
-                        ),
-                        layer_instance.opacity
-                    )
+    if let Some(_) = data.tileset_definition {
+        set_all_tiles_with_func(
+            &mut context.commands,
+            &mut storage,
+            size,
+            TilemapId(layer_entity),
+            tile_pos_to_tile_grid_bundle_maker(
+                tile_pos_to_transparent_tile_maker(
+                    tile_pos_to_int_grid_with_grid_tiles_tile_maker(
+                        &grid_tiles,
+                        &layer_instance.int_grid_csv,
+                        layer_instance.c_wid,
+                        layer_instance.c_hei,
+                        layer_instance.grid_size,
+                        sublayer_index
+                    ),
+                    layer_instance.opacity
                 )
-            );
-        }
-        None => {
-            let int_grid_value_defs = &data.level_data.layer_definition_map
-                .get(&layer_instance.layer_def_uid)
-                .expect("Encountered layer without definition").int_grid_values;
+            )
+        );
+    } else {
+        let int_grid_value_defs = &data.level_data.layer_definition_map
+            .get(&layer_instance.layer_def_uid)
+            .expect("Encountered layer without definition").int_grid_values;
 
-            match context.ldtk_settings.int_grid_rendering {
-                IntGridRendering::Colorful => {
-                    set_all_tiles_with_func(
-                        &mut context.commands,
-                        &mut storage,
-                        size,
-                        TilemapId(layer_entity),
-                        tile_pos_to_tile_grid_bundle_maker(
-                            tile_pos_to_transparent_tile_maker(
-                                tile_pos_to_int_grid_colored_tile_maker(
-                                    &layer_instance.int_grid_csv,
-                                    int_grid_value_defs,
-                                    layer_instance.c_wid,
-                                    layer_instance.c_hei
-                                ),
-                                layer_instance.opacity
-                            )
+        match context.ldtk_settings.int_grid_rendering {
+            IntGridRendering::Colorful => {
+                set_all_tiles_with_func(
+                    &mut context.commands,
+                    &mut storage,
+                    size,
+                    TilemapId(layer_entity),
+                    tile_pos_to_tile_grid_bundle_maker(
+                        tile_pos_to_transparent_tile_maker(
+                            tile_pos_to_int_grid_colored_tile_maker(
+                                &layer_instance.int_grid_csv,
+                                int_grid_value_defs,
+                                layer_instance.c_wid,
+                                layer_instance.c_hei
+                            ),
+                            layer_instance.opacity
                         )
-                    );
-                }
-                IntGridRendering::Invisible => {
-                    set_all_tiles_with_func(
-                        &mut context.commands,
-                        &mut storage,
-                        size,
-                        TilemapId(layer_entity),
-                        tile_pos_to_tile_grid_bundle_maker(
-                            tile_pos_to_transparent_tile_maker(
-                                tile_pos_to_tile_if_int_grid_nonzero_maker(
-                                    tile_pos_to_invisible_tile,
-                                    &layer_instance.int_grid_csv,
-                                    layer_instance.c_wid,
-                                    layer_instance.c_hei
-                                ),
-                                layer_instance.opacity
-                            )
+                    )
+                );
+            }
+            IntGridRendering::Invisible => {
+                set_all_tiles_with_func(
+                    &mut context.commands,
+                    &mut storage,
+                    size,
+                    TilemapId(layer_entity),
+                    tile_pos_to_tile_grid_bundle_maker(
+                        tile_pos_to_transparent_tile_maker(
+                            tile_pos_to_tile_if_int_grid_nonzero_maker(
+                                tile_pos_to_invisible_tile,
+                                &layer_instance.int_grid_csv,
+                                layer_instance.c_wid,
+                                layer_instance.c_hei
+                            ),
+                            layer_instance.opacity
                         )
-                    );
-                }
+                    )
+                );
             }
         }
     }

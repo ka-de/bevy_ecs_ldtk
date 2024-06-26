@@ -5,18 +5,18 @@ use crate::resources::SetClearColor;
 use crate::{
     app::{ LdtkEntityMap, LdtkIntCellMap },
     assets::{ self, LdtkProject },
-    components::*,
+    components::{ LevelIid, LevelSet, Respawn, Worldly },
     ldtk::Level,
     level::SpawnLevelData,
     resources::{ LdtkSettings, LevelEvent, LevelSelection, LevelSpawnBehavior },
-    utils::*,
+    utils::ldtk_pixel_coords_to_translation,
 };
 use assets::LevelMetadataAccessor as _;
 
 use bevy::{ asset::RecursiveDependencyLoadState, ecs::system::SystemState, prelude::* };
 use std::collections::{ HashMap, HashSet };
 
-/// Detects [LdtkProject] events and spawns levels as children of the [LdtkWorldBundle].
+/// Detects [`LdtkProject`] events and spawns levels as children of the [`LdtkWorldBundle`].
 #[allow(clippy::too_many_arguments)]
 pub fn process_ldtk_assets(
     mut commands: Commands,
@@ -52,7 +52,7 @@ pub fn process_ldtk_assets(
 
     #[cfg(feature = "render")]
     if ldtk_settings.set_clear_color == SetClearColor::FromEditorBackground {
-        for handle in ldtk_handles_for_clear_color.iter() {
+        for handle in &ldtk_handles_for_clear_color {
             if let Some(project) = &ldtk_project_assets.get(**handle) {
                 clear_color.0 = project.json_data().bg_color;
             }
@@ -66,7 +66,7 @@ pub fn process_ldtk_assets(
     }
 }
 
-/// Updates all LevelSet components according to the LevelSelection
+/// Updates all `LevelSet` components according to the `LevelSelection`
 pub fn apply_level_selection(
     level_selection: Option<Res<LevelSelection>>,
     ldtk_settings: Res<LdtkSettings>,
@@ -75,7 +75,7 @@ pub fn apply_level_selection(
     #[cfg(feature = "render")] mut clear_color: ResMut<ClearColor>
 ) {
     if let Some(level_selection) = level_selection {
-        for (ldtk_handle, mut level_set) in level_set_query.iter_mut() {
+        for (ldtk_handle, mut level_set) in &mut level_set_query {
             if let Some(project) = &ldtk_project_assets.get(ldtk_handle) {
                 if let Some(level) = project.find_raw_level_by_level_selection(&level_selection) {
                     let new_level_set = {
@@ -206,7 +206,7 @@ fn pre_spawn_level(commands: &mut Commands, level: &Level, ldtk_settings: &LdtkS
 }
 
 /// Performs all the spawning of levels, layers, chunks, bundles, entities, tiles, etc. when a
-/// LevelIid is added or respawned.
+/// `LevelIid` is added or respawned.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn process_ldtk_levels(
     commands: Commands,
@@ -352,7 +352,8 @@ pub fn worldly_adoption(
 
 /// Returns the `iid`s of levels that have spawned in this update.
 ///
-/// Mean to be used in a chain with [fire_level_transformed_events].
+/// Mean to be used in a chain with [`fire_level_transformed_events`].
+#[must_use]
 pub fn detect_level_spawned_events(mut reader: EventReader<LevelEvent>) -> Vec<LevelIid> {
     let mut spawned_ids = Vec::new();
     for event in reader.read() {
@@ -363,10 +364,10 @@ pub fn detect_level_spawned_events(mut reader: EventReader<LevelEvent>) -> Vec<L
     spawned_ids
 }
 
-/// Fires [LevelEvent::Transformed] events for all the entities that spawned in the previous
+/// Fires [`LevelEvent::Transformed`] events for all the entities that spawned in the previous
 /// update.
 ///
-/// Meant to be used in a chain with [detect_level_spawned_events].
+/// Meant to be used in a chain with [`detect_level_spawned_events`].
 pub fn fire_level_transformed_events(
     In(spawned_ids): In<Vec<LevelIid>>,
     mut writer: EventWriter<LevelEvent>
