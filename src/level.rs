@@ -10,6 +10,7 @@ use crate::{
         PhantomLdtkIntCell,
         PhantomLdtkIntCellTrait,
     },
+    assets::{ self, LdtkProjectData },
     components::*,
     ldtk::{
         loaded_level::LoadedLevel,
@@ -23,6 +24,7 @@ use crate::{
         TilesetDefinition,
         Type,
     },
+    prelude::LdtkProject,
     resources::{ IntGridRendering, LdtkSettings, LevelBackground },
     tile_makers::*,
     utils::*,
@@ -177,7 +179,6 @@ fn insert_spatial_bundle_for_layer_tiles(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn insert_tile_metadata_for_layer(
     commands: &mut Commands,
     tile_storage: &TileStorage,
@@ -221,518 +222,665 @@ fn tile_in_layer_bounds(tile: &TileInstance, layer_instance: &LayerInstance) -> 
         tile.px.y < layer_instance.c_hei * layer_instance.grid_size
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn spawn_level(
-    level: LoadedLevel,
-    background_image: &Option<Handle<Image>>,
-    commands: &mut Commands,
-    asset_server: &AssetServer,
-    images: &Assets<Image>,
-    texture_atlases: &mut Assets<TextureAtlasLayout>,
-    ldtk_entity_map: &LdtkEntityMap,
-    ldtk_int_cell_map: &LdtkIntCellMap,
-    entity_definition_map: &HashMap<i32, &EntityDefinition>,
-    layer_definition_map: &HashMap<i32, &LayerDefinition>,
-    tileset_map: &HashMap<i32, Handle<Image>>,
-    tileset_definition_map: &HashMap<i32, &TilesetDefinition>,
-    int_grid_image_handle: &Option<Handle<Image>>,
+pub(crate) struct SpawnBaseContext<'a, 's> {
+    pub commands: Commands<'a, 's>,
+    pub asset_server: &'a AssetServer,
+    pub images: &'a Assets<Image>,
+    pub texture_atlases: ResMut<'a, Assets<TextureAtlasLayout>>,
+    pub ldtk_entity_map: &'a LdtkEntityMap,
+    pub ldtk_int_cell_map: &'a LdtkIntCellMap,
+    pub ldtk_settings: &'a LdtkSettings,
+}
+
+pub(crate) struct SpawnLevelData<'a> {
+    ldtk_project: &'a LdtkProject,
+    loaded_level: LoadedLevel<'a>,
+    level_metadata: &'a assets::LevelMetadata,
+    entity_definition_map: HashMap<i32, &'a EntityDefinition>,
+    layer_definition_map: HashMap<i32, &'a LayerDefinition>,
+    tileset_definition_map: HashMap<i32, &'a TilesetDefinition>,
     worldly_set: HashSet<Worldly>,
     ldtk_entity: Entity,
-    ldtk_settings: &LdtkSettings
-) {
-    let layer_instances = level.layer_instances();
+}
 
-    let mut layer_z = 0;
+impl<'a> SpawnLevelData<'a> {
+    pub fn new(
+        ldtk_project: &'a LdtkProject,
+        level_iid: &'a LevelIid,
+        ldtk_entity: Entity,
+        worldly_set: HashSet<Worldly>,
+        #[cfg(feature = "external_levels")] level_assets: &'a Assets<assets::LdtkExternalLevel>
+    ) -> Option<Self> {
+        // Commence the spawning
+        let tileset_definition_map: HashMap<i32, &TilesetDefinition> = ldtk_project
+            .json_data()
+            .defs.tilesets.iter()
+            .map(|t| (t.uid, t))
+            .collect();
 
-    if ldtk_settings.level_background == LevelBackground::Rendered {
-        let translation = Vec3::new(*level.px_wid() as f32, *level.px_hei() as f32, 0.0) / 2.0;
-
-        let background_entity = commands
-            .spawn(SpriteBundle {
-                sprite: Sprite {
-                    color: *level.bg_color(),
-                    custom_size: Some(Vec2::new(*level.px_wid() as f32, *level.px_hei() as f32)),
-                    ..default()
-                },
-                transform: Transform::from_translation(translation),
-                ..default()
-            })
-            .id();
-
-        commands.entity(ldtk_entity).add_child(background_entity);
-
-        layer_z += 1;
-
-        // Spawn background image
-        if
-            let (Some(background_image_handle), Some(background_position)) = (
-                background_image,
-                level.bg_pos(),
-            )
-        {
-            match
-                background_image_sprite_sheet_bundle(
-                    images,
-                    texture_atlases,
-                    background_image_handle,
-                    background_position,
-                    *level.px_hei(),
-                    layer_z as f32
-                )
-            {
-                Ok(sprite_sheet_bundle) => {
-                    commands.entity(ldtk_entity).with_children(|parent| {
-                        parent.spawn(sprite_sheet_bundle);
-                    });
-
-                    layer_z += 1;
-                }
-                Err(e) => warn!("{}", e),
-            }
-        }
-    }
-
-    for layer_instance in layer_instances
-        .iter()
-        .filter(|layer| { !ldtk_settings.exclusions.layer_identifiers.contains(&layer.identifier) })
-        .rev() {
-        let layer_offset = Vec2::new(
-            layer_instance.px_total_offset_x as f32,
-            -layer_instance.px_total_offset_y as f32
+        let entity_definition_map = create_entity_definition_map(
+            &ldtk_project.json_data().defs.entities
         );
 
-        match layer_instance.layer_instance_type {
-            Type::Entities => {
-                let layer_entity = commands
-                    .spawn(
-                        SpatialBundle::from_transform(
-                            Transform::from_translation(layer_offset.extend(layer_z as f32))
-                        )
-                    )
-                    .insert(LayerMetadata::from(layer_instance))
-                    .insert(Name::new(layer_instance.identifier.to_owned()))
-                    .with_children(|commands| {
-                        for entity_instance in &layer_instance.entity_instances {
-                            let transform = calculate_transform_from_entity_instance(
-                                entity_instance,
-                                entity_definition_map,
-                                *level.px_hei()
-                            );
-                            // Note: entities do not seem to be affected visually by layer offsets in
-                            // the editor, so no layer offset is added to the transform here.
+        let layer_definition_map = create_layer_definition_map(
+            &ldtk_project.json_data().defs.layers
+        );
 
-                            let (tileset, tileset_definition) = match &entity_instance.tile {
-                                Some(t) =>
-                                    (
-                                        tileset_map.get(&t.tileset_uid),
-                                        tileset_definition_map.get(&t.tileset_uid).copied(),
-                                    ),
-                                None => (None, None),
-                            };
+        let maybe_level_data = match ldtk_project.data() {
+            #[cfg(feature = "internal_levels")]
+            LdtkProjectData::Standalone(project) =>
+                project
+                    .level_map()
+                    .get(level_iid.get())
+                    .and_then(|level_metadata| {
+                        let loaded_level = project.get_loaded_level_at_indices(
+                            level_metadata.indices()
+                        )?;
 
-                            let predicted_worldly = Worldly::bundle_entity(
-                                entity_instance,
-                                layer_instance,
-                                tileset,
-                                tileset_definition,
-                                asset_server,
-                                texture_atlases
-                            );
+                        Some((level_metadata, loaded_level))
+                    }),
+            #[cfg(feature = "external_levels")]
+            LdtkProjectData::Parent(project) =>
+                project
+                    .level_map()
+                    .get(level_iid.get())
+                    .and_then(|level_metadata| {
+                        let loaded_level = project.get_external_level_at_indices(
+                            &level_assets,
+                            level_metadata.metadata().indices()
+                        )?;
 
-                            if !worldly_set.contains(&predicted_worldly) {
-                                let default_ldtk_entity: Box<dyn PhantomLdtkEntityTrait> = Box::new(
-                                    PhantomLdtkEntity::<EntityInstanceBundle>::new()
-                                );
-                                let mut entity_commands = commands.spawn_empty();
+                        Some((level_metadata.metadata(), loaded_level))
+                    }),
+        };
 
-                                // insert Name before evaluating LdtkEntitys so that user-provided
-                                // names aren't overwritten
-                                entity_commands.insert((
-                                    EntityIid::new(entity_instance.iid.to_owned()),
-                                    Name::new(entity_instance.identifier.to_owned()),
-                                ));
+        maybe_level_data.map(|(level_metadata, loaded_level)| crate::level::SpawnLevelData {
+            ldtk_project,
+            loaded_level,
+            level_metadata,
+            entity_definition_map,
+            layer_definition_map,
+            tileset_definition_map,
+            worldly_set,
+            ldtk_entity,
+        })
+    }
 
-                                ldtk_map_get_or_default(
-                                    layer_instance.identifier.clone(),
-                                    entity_instance.identifier.clone(),
-                                    &default_ldtk_entity,
-                                    ldtk_entity_map
-                                ).evaluate(
-                                    &mut entity_commands,
-                                    entity_instance,
-                                    layer_instance,
-                                    tileset,
-                                    tileset_definition,
-                                    asset_server,
-                                    texture_atlases
-                                );
+    pub fn spawn(&self, context: &mut SpawnBaseContext) -> LoadedLevel<'a> {
+        let mut layer_z = 0;
 
-                                entity_commands.insert(SpatialBundle {
-                                    transform,
-                                    ..default()
-                                });
-                            }
-                        }
-                    })
-                    .id();
+        if context.ldtk_settings.level_background == LevelBackground::Rendered {
+            spawn_rendered_background(context, self, &mut layer_z);
+        }
 
-                commands.entity(ldtk_entity).add_child(layer_entity);
-                layer_z += 1;
+        for layer_instance in self.loaded_level
+            .layer_instances()
+            .iter()
+            .filter(|layer| {
+                !context.ldtk_settings.exclusions.layer_identifiers.contains(&layer.identifier)
+            })
+            .rev() {
+            spawn_layer(layer_instance, context, self, &mut layer_z);
+        }
+
+        self.loaded_level
+    }
+}
+
+fn spawn_rendered_background(
+    context: &mut SpawnBaseContext,
+    data: &SpawnLevelData,
+    layer_z: &mut i32
+) {
+    let level = &data.loaded_level;
+    let translation = Vec3::new(*level.px_wid() as f32, *level.px_hei() as f32, 0.0) / 2.0;
+
+    let background_entity = context.commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                color: *level.bg_color(),
+                custom_size: Some(Vec2::new(*level.px_wid() as f32, *level.px_hei() as f32)),
+                ..default()
+            },
+            transform: Transform::from_translation(translation),
+            ..default()
+        })
+        .id();
+
+    context.commands.entity(data.ldtk_entity).add_child(background_entity);
+
+    *layer_z += 1;
+
+    // Spawn background image
+    if
+        let (Some(background_image_handle), Some(background_position)) = (
+            data.level_metadata.bg_image(),
+            level.bg_pos(),
+        )
+    {
+        match
+            background_image_sprite_sheet_bundle(
+                context.images,
+                &mut context.texture_atlases,
+                background_image_handle,
+                background_position,
+                *level.px_hei(),
+                *layer_z as f32
+            )
+        {
+            Ok(sprite_sheet_bundle) => {
+                context.commands.entity(data.ldtk_entity).with_children(|parent| {
+                    parent.spawn(sprite_sheet_bundle);
+                });
+
+                *layer_z += 1;
             }
-            _ => {
-                // The remaining layers have a lot of shared code.
-                // This is because:
-                // 1. There is virtually no difference between AutoTile and Tile layers
-                // 2. IntGrid layers can sometimes have AutoTile functionality
+            Err(e) => warn!("{}", e),
+        }
+    }
+}
 
-                let size = TilemapSize {
-                    x: layer_instance.c_wid as u32,
-                    y: layer_instance.c_hei as u32,
+fn spawn_layer(
+    layer_instance: &LayerInstance,
+    context: &mut SpawnBaseContext,
+    data: &SpawnLevelData,
+    layer_z: &mut i32
+) {
+    let layer_offset = Vec2::new(
+        layer_instance.px_total_offset_x as f32,
+        -layer_instance.px_total_offset_y as f32
+    );
+
+    match layer_instance.layer_instance_type {
+        Type::Entities => spawn_entity_layer(layer_instance, context, data, layer_z, layer_offset),
+        _ => if let Some(tile_data) = SpawnTileData::new(data, layer_instance) {
+            spawn_non_entity_layer(context, tile_data, layer_z, layer_offset)
+        }
+    };
+}
+
+fn spawn_entity_layer(
+    layer_instance: &LayerInstance,
+    context: &mut SpawnBaseContext,
+    data: &SpawnLevelData,
+    layer_z: &mut i32,
+    layer_offset: Vec2
+) {
+    let tileset_map = data.ldtk_project.tileset_map();
+    let layer_entity = context.commands
+        .spawn(
+            SpatialBundle::from_transform(
+                Transform::from_translation(layer_offset.extend(*layer_z as f32))
+            )
+        )
+        .insert(LayerMetadata::from(layer_instance))
+        .insert(Name::new(layer_instance.identifier.to_owned()))
+        .with_children(|commands| {
+            for entity_instance in &layer_instance.entity_instances {
+                let transform = calculate_transform_from_entity_instance(
+                    entity_instance,
+                    &data.entity_definition_map,
+                    *data.loaded_level.px_hei()
+                );
+                // Note: entities do not seem to be affected visually by layer offsets in
+                // the editor, so no layer offset is added to the transform here.
+
+                let (tileset, tileset_definition) = match &entity_instance.tile {
+                    Some(t) =>
+                        (
+                            tileset_map.get(&t.tileset_uid),
+                            data.tileset_definition_map.get(&t.tileset_uid).copied(),
+                        ),
+                    None => (None, None),
                 };
 
-                let tileset_definition = layer_instance.tileset_def_uid.map(|u|
-                    tileset_definition_map.get(&u).unwrap()
+                let predicted_worldly = Worldly::bundle_entity(
+                    entity_instance,
+                    layer_instance,
+                    tileset,
+                    tileset_definition,
+                    context.asset_server,
+                    &mut context.texture_atlases
                 );
 
-                let tile_size = tileset_definition
-                    .map(|TilesetDefinition { tile_grid_size, .. }| *tile_grid_size)
-                    .unwrap_or(layer_instance.grid_size) as f32;
+                if !data.worldly_set.contains(&predicted_worldly) {
+                    let mut entity_commands = commands.spawn_empty();
 
-                let tilemap_tile_size = TilemapTileSize {
-                    x: tile_size,
-                    y: tile_size,
-                };
+                    // insert Name before evaluating LdtkEntitys so that user-provided
+                    // names aren't overwritten
+                    entity_commands.insert((
+                        EntityIid::new(entity_instance.iid.to_owned()),
+                        Name::new(entity_instance.identifier.to_owned()),
+                    ));
 
-                let grid_size = layer_instance.grid_size as f32;
+                    ldtk_map_get_or_default(
+                        layer_instance.identifier.clone(),
+                        entity_instance.identifier.clone(),
+                        &PhantomLdtkEntity::<EntityInstanceBundle>::new() as &dyn PhantomLdtkEntityTrait,
+                        context.ldtk_entity_map
+                    ).evaluate(
+                        &mut entity_commands,
+                        entity_instance,
+                        layer_instance,
+                        tileset,
+                        tileset_definition,
+                        context.asset_server,
+                        &mut context.texture_atlases
+                    );
 
-                let tilemap_grid_size = TilemapGridSize {
-                    x: grid_size,
-                    y: grid_size,
-                };
+                    entity_commands.insert(SpatialBundle {
+                        transform,
+                        ..default()
+                    });
+                }
+            }
+        })
+        .id();
 
-                let spacing = match tileset_definition {
-                    Some(tileset_definition) if tileset_definition.spacing != 0 => {
-                        // TODO: Check that this is still an issue with upcoming
-                        // bevy_ecs_tilemap releases
-                        #[cfg(not(feature = "atlas"))]
-                        {
-                            warn!(
-                                "Tile spacing on Tile and AutoTile layers requires the \"atlas\" feature"
-                            );
+    context.commands.entity(data.ldtk_entity).add_child(layer_entity);
+    *layer_z += 1;
+}
 
-                            TilemapSpacing::default()
-                        }
+struct SpawnTileData<'a> {
+    level_data: &'a SpawnLevelData<'a>,
+    layer_instance: &'a LayerInstance,
+    tileset_definition: Option<&'a TilesetDefinition>,
+    metadata_map: HashMap<i32, TileMetadata>,
+    enum_tags_map: HashMap<i32, TileEnumTags>,
+    size: TilemapSize,
+    tilemap_grid_size: TilemapGridSize,
+    spacing: TilemapSpacing,
+    texture: TilemapTexture,
+    tilemap_tile_size: TilemapTileSize,
+}
 
-                        #[cfg(feature = "atlas")]
-                        {
-                            TilemapSpacing {
-                                x: tileset_definition.spacing as f32,
-                                y: tileset_definition.spacing as f32,
-                            }
-                        }
-                    }
-                    _ => TilemapSpacing::default(),
-                };
+impl<'a> SpawnTileData<'a> {
+    fn new(level_data: &'a SpawnLevelData, layer_instance: &'a LayerInstance) -> Option<Self> {
+        let size = TilemapSize {
+            x: layer_instance.c_wid as u32,
+            y: layer_instance.c_hei as u32,
+        };
+        let tileset_definition = layer_instance.tileset_def_uid.map(
+            |u| *level_data.tileset_definition_map.get(&u).unwrap()
+        );
+        let tile_size = tileset_definition
+            .map(|TilesetDefinition { tile_grid_size, .. }| *tile_grid_size)
+            .unwrap_or(layer_instance.grid_size) as f32;
+        let tilemap_tile_size = TilemapTileSize {
+            x: tile_size,
+            y: tile_size,
+        };
+        let grid_size = layer_instance.grid_size as f32;
+        let tilemap_grid_size = TilemapGridSize {
+            x: grid_size,
+            y: grid_size,
+        };
+        let spacing = match tileset_definition {
+            Some(tileset_definition) if tileset_definition.spacing != 0 => {
+                // TODO: Check that this is still an issue with upcoming
+                // bevy_ecs_tilemap releases
+                #[cfg(not(feature = "atlas"))]
+                {
+                    warn!(
+                        "Tile spacing on Tile and AutoTile layers requires the \"atlas\" feature"
+                    );
 
-                let texture = match (tileset_definition, int_grid_image_handle) {
-                    (Some(tileset_definition), _) =>
-                        TilemapTexture::Single(
-                            tileset_map.get(&tileset_definition.uid).unwrap().clone()
-                        ),
-                    (None, Some(handle)) => TilemapTexture::Single(handle.clone()),
-                    _ => {
-                        warn!(
-                            "unable to render tilemap layer, it has no tileset and no intgrid layers were expected"
-                        );
-                        continue;
-                    }
-                };
-
-                let metadata_map: HashMap<i32, TileMetadata> = tileset_definition
-                    .map(|tileset_definition| {
-                        tileset_definition.custom_data
-                            .iter()
-                            .map(|TileCustomMetadata { data, tile_id }| {
-                                (*tile_id, TileMetadata { data: data.clone() })
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
-                let mut enum_tags_map: HashMap<i32, TileEnumTags> = HashMap::new();
-
-                if let Some(tileset_definition) = tileset_definition {
-                    for EnumTagValue {
-                        enum_value_id,
-                        tile_ids,
-                    } in tileset_definition.enum_tags.iter() {
-                        for tile_id in tile_ids {
-                            enum_tags_map
-                                .entry(*tile_id)
-                                .or_insert_with(|| TileEnumTags {
-                                    tags: Vec::new(),
-                                    source_enum_uid: tileset_definition.tags_source_enum_uid,
-                                })
-                                .tags.push(enum_value_id.clone());
-                        }
-                    }
+                    TilemapSpacing::default()
                 }
 
-                let mut grid_tiles = layer_instance.grid_tiles.clone();
-                grid_tiles.extend(layer_instance.auto_layer_tiles.clone());
-
-                for (i, grid_tiles) in layer_grid_tiles(grid_tiles)
-                    .into_iter()
-                    // filter out tiles that are out of bounds
-                    .map(|grid_tiles| {
-                        grid_tiles
-                            .into_iter()
-                            .filter(|tile| tile_in_layer_bounds(tile, layer_instance))
-                            .collect::<Vec<_>>()
+                #[cfg(feature = "atlas")]
+                {
+                    TilemapSpacing {
+                        x: tileset_definition.spacing as f32,
+                        y: tileset_definition.spacing as f32,
+                    }
+                }
+            }
+            _ => TilemapSpacing::default(),
+        };
+        let texture = match (tileset_definition, level_data.ldtk_project.int_grid_image_handle()) {
+            (Some(tileset_definition), _) =>
+                TilemapTexture::Single(
+                    level_data.ldtk_project
+                        .tileset_map()
+                        .get(&tileset_definition.uid)
+                        .unwrap()
+                        .clone()
+                ),
+            (None, Some(handle)) => TilemapTexture::Single(handle.clone()),
+            _ => {
+                warn!(
+                    "unable to render tilemap layer, it has no tileset and no intgrid layers were expected"
+                );
+                return None;
+            }
+        };
+        let metadata_map: HashMap<i32, TileMetadata> = tileset_definition
+            .map(|tileset_definition| {
+                tileset_definition.custom_data
+                    .iter()
+                    .map(|TileCustomMetadata { data, tile_id }| {
+                        (*tile_id, TileMetadata { data: data.clone() })
                     })
-                    .enumerate() {
-                    let layer_entity = commands.spawn_empty().id();
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut enum_tags_map: HashMap<i32, TileEnumTags> = HashMap::new();
+        if let Some(tileset_definition) = tileset_definition {
+            for EnumTagValue { enum_value_id, tile_ids } in tileset_definition.enum_tags.iter() {
+                for tile_id in tile_ids {
+                    enum_tags_map
+                        .entry(*tile_id)
+                        .or_insert_with(|| TileEnumTags {
+                            tags: Vec::new(),
+                            source_enum_uid: tileset_definition.tags_source_enum_uid,
+                        })
+                        .tags.push(enum_value_id.clone());
+                }
+            }
+        }
+        Some(SpawnTileData {
+            level_data,
+            size,
+            tileset_definition,
+            layer_instance,
+            metadata_map,
+            enum_tags_map,
+            tilemap_grid_size,
+            spacing,
+            texture,
+            tilemap_tile_size,
+        })
+    }
+}
 
-                    let tilemap_bundle = if layer_instance.layer_instance_type == Type::IntGrid {
-                        // The current spawning of IntGrid layers doesn't allow using
-                        // LayerBuilder::new_batch().
-                        // So, the actual LayerBuilder usage diverges greatly here
-                        let mut storage = TileStorage::empty(size);
+/// The remaining layers have a lot of shared code.
+/// This is because:
+/// 1. There is virtually no difference between AutoTile and Tile layers
+/// 2. IntGrid layers can sometimes have AutoTile functionality
+fn spawn_non_entity_layer(
+    context: &mut SpawnBaseContext,
+    data: SpawnTileData,
+    layer_z: &mut i32,
+    layer_offset: Vec2
+) {
+    let layer_instance = data.layer_instance;
+    let mut grid_tiles = layer_instance.grid_tiles.clone();
+    grid_tiles.extend(layer_instance.auto_layer_tiles.clone());
 
-                        match tileset_definition {
-                            Some(_) => {
-                                set_all_tiles_with_func(
-                                    commands,
-                                    &mut storage,
-                                    size,
-                                    TilemapId(layer_entity),
-                                    tile_pos_to_tile_grid_bundle_maker(
-                                        tile_pos_to_transparent_tile_maker(
-                                            tile_pos_to_int_grid_with_grid_tiles_tile_maker(
-                                                &grid_tiles,
-                                                &layer_instance.int_grid_csv,
-                                                layer_instance.c_wid,
-                                                layer_instance.c_hei,
-                                                layer_instance.grid_size,
-                                                i
-                                            ),
-                                            layer_instance.opacity
-                                        )
-                                    )
-                                );
-                            }
-                            None => {
-                                let int_grid_value_defs = &layer_definition_map
-                                    .get(&layer_instance.layer_def_uid)
-                                    .expect("Encountered layer without definition").int_grid_values;
+    for (sublayer_index, grid_tiles) in layer_grid_tiles(grid_tiles)
+        .into_iter()
+        // filter out tiles that are out of bounds
+        .map(|grid_tiles| {
+            grid_tiles
+                .into_iter()
+                .filter(|tile| tile_in_layer_bounds(tile, layer_instance))
+                .collect::<Vec<_>>()
+        })
+        .enumerate() {
+        let (tilemap_bundle, layer_entity) = if layer_instance.layer_instance_type == Type::IntGrid {
+            spawn_intgrid_tilemap_bundle(context, &data, grid_tiles, sublayer_index)
+        } else {
+            spawn_tilemap_bundle(&mut context.commands, &data, grid_tiles)
+        };
 
-                                match ldtk_settings.int_grid_rendering {
-                                    IntGridRendering::Colorful => {
-                                        set_all_tiles_with_func(
-                                            commands,
-                                            &mut storage,
-                                            size,
-                                            TilemapId(layer_entity),
-                                            tile_pos_to_tile_grid_bundle_maker(
-                                                tile_pos_to_transparent_tile_maker(
-                                                    tile_pos_to_int_grid_colored_tile_maker(
-                                                        &layer_instance.int_grid_csv,
-                                                        int_grid_value_defs,
-                                                        layer_instance.c_wid,
-                                                        layer_instance.c_hei
-                                                    ),
-                                                    layer_instance.opacity
-                                                )
-                                            )
-                                        );
-                                    }
-                                    IntGridRendering::Invisible => {
-                                        set_all_tiles_with_func(
-                                            commands,
-                                            &mut storage,
-                                            size,
-                                            TilemapId(layer_entity),
-                                            tile_pos_to_tile_grid_bundle_maker(
-                                                tile_pos_to_transparent_tile_maker(
-                                                    tile_pos_to_tile_if_int_grid_nonzero_maker(
-                                                        tile_pos_to_invisible_tile,
-                                                        &layer_instance.int_grid_csv,
-                                                        layer_instance.c_wid,
-                                                        layer_instance.c_hei
-                                                    ),
-                                                    layer_instance.opacity
-                                                )
-                                            )
-                                        );
-                                    }
-                                }
-                            }
-                        }
+        insert_spatial_bundle_for_layer_tiles(
+            &mut context.commands,
+            &tilemap_bundle.storage,
+            &tilemap_bundle.size,
+            layer_instance.grid_size,
+            TilemapId(layer_entity)
+        );
 
-                        if i == 0 {
-                            for (i, value) in layer_instance.int_grid_csv
-                                .iter()
-                                .enumerate()
-                                .filter(|(_, v)| **v != 0) {
-                                let grid_coords = int_grid_index_to_grid_coords(
-                                    i,
-                                    layer_instance.c_wid as u32,
-                                    layer_instance.c_hei as u32
-                                ).expect(
-                                    "int_grid_csv indices should be within the bounds of 0..(layer_width * layer_height)"
-                                );
+        let LayerDefinition { tile_pivot_x, tile_pivot_y, .. } =
+            &data.level_data.layer_definition_map
+                .get(&layer_instance.layer_def_uid)
+                .expect("Encountered layer without definition");
 
-                                if let Some(tile_entity) = storage.get(&grid_coords.into()) {
-                                    let mut entity_commands = commands.entity(tile_entity);
+        // The math for determining the x/y of a tilemap layer depends heavily on
+        // both the layer's grid size and the tileset's tile size.
+        // In particular, we care about their difference for properly reversing y
+        // direction and for tile pivot calculations.
+        let grid_tile_size_difference = data.tilemap_grid_size.x - data.tilemap_tile_size.x;
 
-                                    let default_ldtk_int_cell: Box<
-                                        dyn PhantomLdtkIntCellTrait
-                                    > = Box::new(PhantomLdtkIntCell::<IntGridCellBundle>::new());
+        // It is useful to determine what we should treat as the desired "origin" of
+        // the tilemap in bevy space.
+        // This will be the bottom left pixel of the tilemap.
+        // The y value is affected when there is a difference between the grid size and
+        // tile size - it sinks below 0 when the grid size is greater.
+        let bottom_left_pixel = Vec2::new(0.0, grid_tile_size_difference);
 
-                                    ldtk_map_get_or_default(
-                                        layer_instance.identifier.clone(),
-                                        *value,
-                                        &default_ldtk_int_cell,
-                                        ldtk_int_cell_map
-                                    ).evaluate(
-                                        &mut entity_commands,
-                                        IntGridCell { value: *value },
-                                        layer_instance
-                                    );
-                                }
-                            }
-                        }
+        // Tiles in bevy_ecs_tilemap are anchored to the center of the tile.
+        // We need to cancel out this anchoring so that layers of different sizes will
+        // stack on top of eachother as they do in LDtk.
+        let centering_adjustment = Vec2::splat(data.tilemap_tile_size.x / 2.0);
 
-                        if !(metadata_map.is_empty() && enum_tags_map.is_empty()) {
-                            insert_tile_metadata_for_layer(
-                                commands,
-                                &storage,
-                                &grid_tiles,
-                                layer_instance,
-                                &metadata_map,
-                                &enum_tags_map
-                            );
-                        }
+        // Layers in LDtk can have a pivot value that acts like an anchor.
+        // The amount that a tile is translated by this pivot is simply the difference
+        // between grid_size and tile_size again.
+        let pivot_adjustment = Vec2::new(
+            grid_tile_size_difference * tile_pivot_x,
+            -grid_tile_size_difference * tile_pivot_y
+        );
 
-                        TilemapBundle {
-                            grid_size: tilemap_grid_size,
-                            size,
-                            spacing,
-                            storage,
-                            texture: texture.clone(),
-                            tile_size: tilemap_tile_size,
-                            ..default()
-                        }
-                    } else {
-                        let tile_bundle_maker = tile_pos_to_tile_grid_bundle_maker(
+        context.commands
+            .entity(layer_entity)
+            .insert(tilemap_bundle)
+            .insert(
+                SpatialBundle::from_transform(
+                    Transform::from_translation(
+                        (
+                            bottom_left_pixel +
+                            centering_adjustment +
+                            pivot_adjustment +
+                            layer_offset
+                        ).extend(*layer_z as f32)
+                    )
+                )
+            )
+            .insert(LayerMetadata::from(layer_instance))
+            .insert(Name::new(layer_instance.identifier.to_owned()));
+
+        context.commands.entity(data.level_data.ldtk_entity).add_child(layer_entity);
+
+        *layer_z += 1;
+    }
+}
+
+fn spawn_intgrid_tilemap_bundle(
+    context: &mut SpawnBaseContext,
+    data: &SpawnTileData,
+    grid_tiles: Vec<TileInstance>,
+    sublayer_index: usize
+) -> (
+    bevy_ecs_tilemap::MaterialTilemapBundle<bevy_ecs_tilemap::prelude::StandardTilemapMaterial>,
+    Entity,
+) {
+    let size = data.size;
+    let layer_instance = data.layer_instance;
+    // The current spawning of IntGrid layers doesn't allow using
+    // LayerBuilder::new_batch().
+    // So, the actual LayerBuilder usage diverges greatly here
+    let mut storage = TileStorage::empty(size);
+    let layer_entity = context.commands.spawn_empty().id();
+
+    match data.tileset_definition {
+        Some(_) => {
+            set_all_tiles_with_func(
+                &mut context.commands,
+                &mut storage,
+                size,
+                TilemapId(layer_entity),
+                tile_pos_to_tile_grid_bundle_maker(
+                    tile_pos_to_transparent_tile_maker(
+                        tile_pos_to_int_grid_with_grid_tiles_tile_maker(
+                            &grid_tiles,
+                            &layer_instance.int_grid_csv,
+                            layer_instance.c_wid,
+                            layer_instance.c_hei,
+                            layer_instance.grid_size,
+                            sublayer_index
+                        ),
+                        layer_instance.opacity
+                    )
+                )
+            );
+        }
+        None => {
+            let int_grid_value_defs = &data.level_data.layer_definition_map
+                .get(&layer_instance.layer_def_uid)
+                .expect("Encountered layer without definition").int_grid_values;
+
+            match context.ldtk_settings.int_grid_rendering {
+                IntGridRendering::Colorful => {
+                    set_all_tiles_with_func(
+                        &mut context.commands,
+                        &mut storage,
+                        size,
+                        TilemapId(layer_entity),
+                        tile_pos_to_tile_grid_bundle_maker(
                             tile_pos_to_transparent_tile_maker(
-                                tile_pos_to_tile_maker(
-                                    &grid_tiles,
-                                    layer_instance.c_hei,
-                                    layer_instance.grid_size
+                                tile_pos_to_int_grid_colored_tile_maker(
+                                    &layer_instance.int_grid_csv,
+                                    int_grid_value_defs,
+                                    layer_instance.c_wid,
+                                    layer_instance.c_hei
                                 ),
                                 layer_instance.opacity
                             )
-                        );
-
-                        // When we add metadata to tiles, we need to add additional
-                        // components to them.
-                        // This can't be accomplished using LayerBuilder::new_batch,
-                        // so the logic for building layers with metadata is slower.
-
-                        let mut storage = TileStorage::empty(size);
-
-                        set_all_tiles_with_func(
-                            commands,
-                            &mut storage,
-                            size,
-                            TilemapId(layer_entity),
-                            tile_bundle_maker
-                        );
-
-                        if !(metadata_map.is_empty() && enum_tags_map.is_empty()) {
-                            insert_tile_metadata_for_layer(
-                                commands,
-                                &storage,
-                                &grid_tiles,
-                                layer_instance,
-                                &metadata_map,
-                                &enum_tags_map
-                            );
-                        }
-
-                        TilemapBundle {
-                            grid_size: tilemap_grid_size,
-                            size,
-                            spacing,
-                            storage,
-                            texture: texture.clone(),
-                            tile_size: tilemap_tile_size,
-                            ..default()
-                        }
-                    };
-
-                    insert_spatial_bundle_for_layer_tiles(
-                        commands,
-                        &tilemap_bundle.storage,
-                        &tilemap_bundle.size,
-                        layer_instance.grid_size,
-                        TilemapId(layer_entity)
+                        )
                     );
-
-                    let LayerDefinition { tile_pivot_x, tile_pivot_y, .. } = &layer_definition_map
-                        .get(&layer_instance.layer_def_uid)
-                        .expect("Encountered layer without definition");
-
-                    // The math for determining the x/y of a tilemap layer depends heavily on
-                    // both the layer's grid size and the tileset's tile size.
-                    // In particular, we care about their difference for properly reversing y
-                    // direction and for tile pivot calculations.
-                    let grid_tile_size_difference = grid_size - tile_size;
-
-                    // It is useful to determine what we should treat as the desired "origin" of
-                    // the tilemap in bevy space.
-                    // This will be the bottom left pixel of the tilemap.
-                    // The y value is affected when there is a difference between the grid size and
-                    // tile size - it sinks below 0 when the grid size is greater.
-                    let bottom_left_pixel = Vec2::new(0.0, grid_tile_size_difference);
-
-                    // Tiles in bevy_ecs_tilemap are anchored to the center of the tile.
-                    // We need to cancel out this anchoring so that layers of different sizes will
-                    // stack on top of eachother as they do in LDtk.
-                    let centering_adjustment = Vec2::splat(tile_size / 2.0);
-
-                    // Layers in LDtk can have a pivot value that acts like an anchor.
-                    // The amount that a tile is translated by this pivot is simply the difference
-                    // between grid_size and tile_size again.
-                    let pivot_adjustment = Vec2::new(
-                        grid_tile_size_difference * tile_pivot_x,
-                        -grid_tile_size_difference * tile_pivot_y
-                    );
-
-                    commands
-                        .entity(layer_entity)
-                        .insert(tilemap_bundle)
-                        .insert(
-                            SpatialBundle::from_transform(
-                                Transform::from_translation(
-                                    (
-                                        bottom_left_pixel +
-                                        centering_adjustment +
-                                        pivot_adjustment +
-                                        layer_offset
-                                    ).extend(layer_z as f32)
-                                )
+                }
+                IntGridRendering::Invisible => {
+                    set_all_tiles_with_func(
+                        &mut context.commands,
+                        &mut storage,
+                        size,
+                        TilemapId(layer_entity),
+                        tile_pos_to_tile_grid_bundle_maker(
+                            tile_pos_to_transparent_tile_maker(
+                                tile_pos_to_tile_if_int_grid_nonzero_maker(
+                                    tile_pos_to_invisible_tile,
+                                    &layer_instance.int_grid_csv,
+                                    layer_instance.c_wid,
+                                    layer_instance.c_hei
+                                ),
+                                layer_instance.opacity
                             )
                         )
-                        .insert(LayerMetadata::from(layer_instance))
-                        .insert(Name::new(layer_instance.identifier.to_owned()));
-
-                    commands.entity(ldtk_entity).add_child(layer_entity);
-
-                    layer_z += 1;
+                    );
                 }
             }
         }
     }
+
+    if sublayer_index == 0 {
+        for (i, value) in layer_instance.int_grid_csv
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| **v != 0) {
+            let grid_coords = int_grid_index_to_grid_coords(
+                i,
+                layer_instance.c_wid as u32,
+                layer_instance.c_hei as u32
+            ).expect(
+                "int_grid_csv indices should be within the bounds of 0..(layer_width * layer_height)"
+            );
+
+            if let Some(tile_entity) = storage.get(&grid_coords.into()) {
+                ldtk_map_get_or_default(
+                    layer_instance.identifier.clone(),
+                    *value,
+                    &PhantomLdtkIntCell::<IntGridCellBundle>::new() as &dyn PhantomLdtkIntCellTrait,
+                    context.ldtk_int_cell_map
+                ).evaluate(
+                    &mut context.commands.entity(tile_entity),
+                    IntGridCell { value: *value },
+                    layer_instance
+                );
+            }
+        }
+    }
+
+    if !(data.metadata_map.is_empty() && data.enum_tags_map.is_empty()) {
+        insert_tile_metadata_for_layer(
+            &mut context.commands,
+            &storage,
+            &grid_tiles,
+            layer_instance,
+            &data.metadata_map,
+            &data.enum_tags_map
+        );
+    }
+
+    (
+        TilemapBundle {
+            grid_size: data.tilemap_grid_size,
+            size,
+            spacing: data.spacing,
+            storage,
+            texture: data.texture.clone(),
+            tile_size: data.tilemap_tile_size,
+            ..default()
+        },
+        layer_entity,
+    )
+}
+
+fn spawn_tilemap_bundle(
+    commands: &mut Commands,
+    data: &SpawnTileData,
+    grid_tiles: Vec<TileInstance>
+) -> (
+    bevy_ecs_tilemap::MaterialTilemapBundle<bevy_ecs_tilemap::prelude::StandardTilemapMaterial>,
+    Entity,
+) {
+    let layer_entity = commands.spawn_empty().id();
+    let size = data.size;
+    let layer_instance = data.layer_instance;
+    let tile_bundle_maker = tile_pos_to_tile_grid_bundle_maker(
+        tile_pos_to_transparent_tile_maker(
+            tile_pos_to_tile_maker(&grid_tiles, layer_instance.c_hei, layer_instance.grid_size),
+            layer_instance.opacity
+        )
+    );
+
+    // When we add metadata to tiles, we need to add additional
+    // components to them.
+    // This can't be accomplished using LayerBuilder::new_batch,
+    // so the logic for building layers with metadata is slower.
+
+    let mut storage = TileStorage::empty(size);
+
+    set_all_tiles_with_func(
+        commands,
+        &mut storage,
+        size,
+        TilemapId(layer_entity),
+        tile_bundle_maker
+    );
+
+    if !(data.metadata_map.is_empty() && data.enum_tags_map.is_empty()) {
+        insert_tile_metadata_for_layer(
+            commands,
+            &storage,
+            &grid_tiles,
+            data.layer_instance,
+            &data.metadata_map,
+            &data.enum_tags_map
+        );
+    }
+
+    (
+        TilemapBundle {
+            grid_size: data.tilemap_grid_size,
+            size,
+            spacing: data.spacing,
+            storage,
+            texture: data.texture.clone(),
+            tile_size: data.tilemap_tile_size,
+            ..default()
+        },
+        layer_entity,
+    )
 }

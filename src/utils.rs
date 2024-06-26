@@ -298,16 +298,16 @@ pub(crate) fn try_each_optional_permutation<A, B, R>(
 /// instance of an LDtk entity or int grid tile may match multiple registrations.
 /// This function is responsible for picking the correct registration while spawning these
 /// entities/tiles.
-pub(crate) fn ldtk_map_get_or_default<'a, A, B, L>(
+pub(crate) fn ldtk_map_get_or_default<'a, A, B, L, T>(
     a: A,
     b: B,
-    default: &'a L,
+    default: &'a T,
     map: &'a HashMap<(Option<A>, Option<B>), L>
 )
-    -> &'a L
-    where A: Hash + Eq + Clone, B: Hash + Eq + Clone
+    -> &'a T
+    where A: Hash + Eq + Clone, B: Hash + Eq + Clone, L: AsRef<T>, T: ?Sized
 {
-    try_each_optional_permutation(a, b, |x, y| map.get(&(x, y))).unwrap_or(default)
+    try_each_optional_permutation(a, b, |x, y| map.get(&(x, y))).map_or(default, |x| x.as_ref())
 }
 
 /// Creates a [SpriteSheetBundle] from the entity information available to the
