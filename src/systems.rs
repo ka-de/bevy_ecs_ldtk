@@ -126,23 +126,31 @@ pub fn apply_level_set(
     mut level_events: EventWriter<LevelEvent>
 ) {
     for (world_entity, level_set, children, ldtk_asset_handle, respawn) in ldtk_world_query.iter() {
-        // Only apply level set if the asset has finished loading
         if let Some(project) = ldtk_project_assets.get(ldtk_asset_handle) {
-            if
-                let Some(load_state) =
-                    asset_server.get_recursive_dependency_load_state(ldtk_asset_handle)
-            {
-                if load_state != RecursiveDependencyLoadState::Loaded {
-                    continue;
-                }
-            }
             // Determine what levels are currently spawned
-            let previous_level_maps = children
-                .into_iter()
-                .flat_map(|iterator| iterator.iter())
+            let previous_level_maps = if let Some(children) = children {
+                children
+                    .iter()
                 .filter_map(|child_entity| ldtk_level_query.get(*child_entity).ok())
                 .map(|(level_iid, entity)| (level_iid.clone(), entity))
-                .collect::<HashMap<_, _>>();
+                    .collect()
+            } else {
+                // If no level have already been spawn, only apply level set if the asset has finished loading
+                match asset_server.recursive_dependency_load_state(ldtk_asset_handle) {
+                    RecursiveDependencyLoadState::Loaded => (),
+                    RecursiveDependencyLoadState::Failed => {
+                        if let Some(path) = asset_server.get_path(ldtk_asset_handle) {
+                            error!("Some assets of the LDtk project {} failed to load", path);
+                        } else {
+                            error!("Some assets of the LDtk project failed to load");
+                        }
+                    }
+                    _ => {
+                        continue;
+                    }
+                }
+                HashMap::new()
+            };
 
             let previous_iids: HashSet<&LevelIid> = previous_level_maps.keys().collect();
 
