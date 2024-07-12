@@ -56,9 +56,7 @@ path = "examples/field_instances/main.rs"
 [[example]]
 name = "collectathon"
 path = "examples/collectathon/main.rs"
-<<<<<<< ours
-=======
 
 [patch.crates-io]
 bevy_egui = { git = "https://github.com/Friz64/bevy_egui.git", branch = "bevy-0.14" }
->>>>>>> theirs
+
